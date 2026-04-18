@@ -72,7 +72,45 @@ async function fetchWithProxy(targetUrl: string, timeoutMs = 10000): Promise<str
 }
 
 /**
- * Try to find app icon from GitHub README (first image that looks like a logo/icon)
+ * Check if a URL is a badge/shield image (not an actual app icon)
+ */
+function isBadgeUrl(url: string): boolean {
+  const badgePatterns = [
+    'shields.io', 'badge', 'img.shields', 'github.com/workflows',
+    'travis-ci', 'circleci', 'codecov', 'coveralls', 'david-dm',
+    'snyk.io', 'codacy', 'codeclimate', 'sonarcloud',
+    'github-readme-stats', 'forthebadge', 'heroku',
+    'actions/workflows', 'github.com/actions',
+    'avatars.githubusercontent.com', // Developer profile photos - not app icons
+    'contributors-img', 'contrib.rocks', // Contributor grid images
+    'opencollective.com', // Sponsor/backer images
+    'buymeacoffee.com', // Donation badges
+    'ko-fi.com', // Donation badges
+    'paypal.com', // Payment badges
+    'patreon.com', // Patron badges
+    'liberapay.com', // Donation badges
+    'user-images.githubusercontent.com', // User uploaded images (often screenshots)
+  ];
+  const lower = url.toLowerCase();
+  return badgePatterns.some(p => lower.includes(p));
+}
+
+/**
+ * Check if URL points to a real image (not a badge, not too small)
+ */
+function isLikelyAppIcon(url: string, alt: string): boolean {
+  if (isBadgeUrl(url)) return false;
+  // Check if alt text or URL suggests it's a logo/icon
+  const combined = (url + ' ' + alt).toLowerCase();
+  const iconKeywords = ['logo', 'icon', 'banner', 'app', 'screenshot', 'preview'];
+  return iconKeywords.some(k => combined.includes(k));
+}
+
+/**
+ * Try to find app icon from GitHub README with smarter detection
+ * Strategy: 1) Look for images with logo/icon keywords 2) Look for first non-badge image
+ * 3) Search common icon paths in repo 4) Search repo tree for icon files
+ * 5) Fallback to empty (letter icon in UI)
  */
 async function fetchGitHubAppIcon(owner: string, repo: string): Promise<string> {
   try {
@@ -84,34 +122,110 @@ async function fetchGitHubAppIcon(owner: string, repo: string): Promise<string> 
     const readmeData = await readmeRes.json();
     const content = atob(readmeData.content.replace(/\n/g, ''));
 
-    // Find first image in README (usually the logo)
-    const imgPatterns = [
-      // Markdown images: ![alt](url)
-      /!\[[^\]]*(?:logo|icon|banner)[^\]]*\]\(([^)]+)\)/i,
-      // HTML images with logo/icon in src or alt
-      /<img[^>]*(?:logo|icon)[^>]*src=["']([^"']+)["']/i,
-      // Any first markdown image as fallback
-      /!\[[^\]]*\]\(([^)]+)\)/,
-    ];
+    // Collect ALL images from README (markdown + html)
+    const allImages: { url: string; alt: string }[] = [];
 
-    for (const pattern of imgPatterns) {
-      const match = content.match(pattern);
-      if (match) {
-        let imgUrl = match[1];
-        // Skip badge images
-        if (imgUrl.includes('shields.io') || imgUrl.includes('badge') || imgUrl.includes('img.shields')) {
-          continue;
-        }
-        // Convert relative URLs to absolute
+    // Markdown images: ![alt](url)
+    const mdRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    let m: RegExpExecArray | null;
+    while ((m = mdRegex.exec(content)) !== null) {
+      allImages.push({ alt: m[1], url: m[2] });
+    }
+
+    // HTML images: <img src="..." alt="...">
+    const htmlRegex = /<img[^>]*src=["']([^"']+)["'][^>]*(?:alt=["']([^"']*)["'])?/gi;
+    while ((m = htmlRegex.exec(content)) !== null) {
+      allImages.push({ url: m[1], alt: m[2] || '' });
+    }
+
+    // Also check reverse order for HTML: alt before src
+    const htmlRegex2 = /<img[^>]*alt=["']([^"']*)["'][^>]*src=["']([^"']+)["']/gi;
+    while ((m = htmlRegex2.exec(content)) !== null) {
+      allImages.push({ url: m[2], alt: m[1] });
+    }
+
+    // Strategy 1: Find image with logo/icon keyword in alt or URL
+    for (const img of allImages) {
+      if (isBadgeUrl(img.url)) continue;
+      if (isLikelyAppIcon(img.url, img.alt)) {
+        let imgUrl = img.url;
         if (!imgUrl.startsWith('http')) {
           imgUrl = `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${imgUrl}`;
         }
         return imgUrl;
       }
     }
+
+    // Strategy 2: Find first non-badge image (often the logo at top of README)
+    for (const img of allImages) {
+      if (isBadgeUrl(img.url)) continue;
+      let imgUrl = img.url;
+      if (!imgUrl.startsWith('http')) {
+        imgUrl = `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${imgUrl}`;
+      }
+      return imgUrl;
+    }
   } catch {
     // README fetch failed
   }
+
+  // Strategy 3: Check common icon paths in the repository
+  const commonPaths = [
+    'app/src/main/ic_launcher-playstore.png',
+    'app/src/main/res/mipmap-xxxhdpi/ic_launcher.png',
+    'app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp',
+    'app/src/main/res/mipmap-xxhdpi/ic_launcher.png',
+    'assets/icon.png',
+    'assets/logo.png',
+    'images/icon.png',
+    'images/logo.png',
+    'docs/images/logo.png',
+    'art/icon.png',
+    'art/logo.png',
+    '.github/icon.png',
+    'fastlane/metadata/android/en-US/images/icon.png',
+  ];
+
+  for (const path of commonPaths) {
+    try {
+      const checkUrl = `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${path}`;
+      const res = await fetch(checkUrl, { method: 'HEAD', signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        return checkUrl;
+      }
+    } catch {
+      // Continue to next path
+    }
+  }
+
+  // Strategy 4: Search repo tree for icon/logo image files
+  try {
+    const treeRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (treeRes.ok) {
+      const treeData = await treeRes.json();
+      const imageExts = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
+      const iconKeywords = ['icon', 'logo', 'launcher', 'ic_launcher'];
+      const tree = treeData.tree || [];
+
+      // First pass: look for files with icon/logo keywords
+      for (const item of tree) {
+        if (item.type !== 'blob') continue;
+        const pathLower = item.path.toLowerCase();
+        const ext = pathLower.split('.').pop() || '';
+        if (!imageExts.includes(ext)) continue;
+        if (iconKeywords.some(k => pathLower.includes(k))) {
+          return `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${item.path}`;
+        }
+      }
+    }
+  } catch {
+    // Tree fetch failed
+  }
+
+  // No icon found - return empty string (UI will show letter-based icon)
   return '';
 }
 
@@ -167,9 +281,9 @@ async function fetchGitHubData(url: string): Promise<FetchedAppData> {
     }
   }
 
-  // Try to get app icon from README first, fallback to owner avatar
-  const readmeIcon = await fetchGitHubAppIcon(owner, repo);
-  const iconUrl = readmeIcon || repoData.owner?.avatar_url || '';
+  // Try to get app icon from README/repo - NO fallback to owner avatar
+  // (owner avatar is misleading - shows person's face instead of app icon)
+  const iconUrl = await fetchGitHubAppIcon(owner, repo);
 
   return {
     name: repoData.name || repo,

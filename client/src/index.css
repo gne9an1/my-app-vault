@@ -254,4 +254,36 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  /* Mobile touch improvements */
+  @media (hover: none) and (pointer: coarse) {
+    .glass-card:hover {
+      background: oklch(0.20 0.015 260 / 45%);
+      border-color: oklch(0.45 0.015 260 / 25%);
+      box-shadow: none;
+    }
+    .glass-card:active {
+      background: oklch(0.22 0.015 260 / 55%);
+      border-color: oklch(0.75 0.15 180 / 30%);
+    }
+  }
+
+  /* Safe area for devices with notch */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    .sticky.top-0 {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
+
+  /* Prevent text selection on buttons */
+  button {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
 }

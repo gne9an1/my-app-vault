@@ -1,6 +1,7 @@
 /*
  * Design: Glass Vault / Frosted Modern
  * Import/Export dialog
+ * MOBILE-FIRST: compact spacing on phones
  */
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAppContext } from '@/contexts/AppContext';
@@ -56,18 +57,17 @@ export default function ImportExportDialog({ open, onOpenChange, mode }: ImportE
       }
     };
     reader.readAsText(file);
-    // Reset input
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm" style={{
+      <DialogContent className="max-w-sm max-h-[85vh] max-h-[85dvh] overflow-y-auto" style={{
         background: 'oklch(0.16 0.02 260)',
         border: '1px solid oklch(0.35 0.015 260 / 30%)',
       }}>
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold" style={{
+          <DialogTitle className="text-base sm:text-lg font-bold" style={{
             color: 'oklch(0.95 0.005 260)',
             fontFamily: "'Space Grotesk', 'IBM Plex Sans Arabic', sans-serif",
           }}>
@@ -76,55 +76,55 @@ export default function ImportExportDialog({ open, onOpenChange, mode }: ImportE
         </DialogHeader>
 
         {mode === 'export' ? (
-          <div className="space-y-4 mt-2">
-            <div className="p-4 rounded-xl text-center" style={{
+          <div className="space-y-3 sm:space-y-4 mt-1 sm:mt-2">
+            <div className="p-4 sm:p-5 rounded-xl text-center" style={{
               background: 'oklch(0.20 0.015 260 / 50%)',
               border: '1px solid oklch(0.30 0.015 260 / 20%)',
             }}>
-              <FileJson size={40} className="mx-auto mb-2" style={{ color: 'oklch(0.75 0.15 180)' }} />
-              <p className="text-sm font-medium" style={{ color: 'oklch(0.85 0.005 260)' }}>
+              <FileJson size={40} className="mx-auto mb-2.5 sm:mb-3 sm:!w-12 sm:!h-12" style={{ color: 'oklch(0.75 0.15 180)' }} />
+              <p className="text-sm sm:text-base font-medium" style={{ color: 'oklch(0.85 0.005 260)' }}>
                 {apps.length} تطبيق جاهز للتصدير
               </p>
-              <p className="text-xs mt-1" style={{ color: 'oklch(0.50 0.01 260)' }}>
+              <p className="text-xs sm:text-sm mt-1 sm:mt-1.5 leading-relaxed" style={{ color: 'oklch(0.50 0.01 260)' }}>
                 احفظ الملف في Google Drive أو أي كلاود عشان يكون متاح بعد الفورمات
               </p>
             </div>
 
             <button
               onClick={handleExport}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all"
+              className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-semibold transition-all active:scale-[0.98]"
               style={{
                 background: 'linear-gradient(135deg, oklch(0.75 0.15 180), oklch(0.60 0.15 180))',
                 color: 'oklch(0.15 0.015 260)',
               }}
             >
-              <Download size={16} />
+              <Download size={18} />
               تحميل ملف JSON
             </button>
 
             <button
               onClick={handleCopyToClipboard}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
+              className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-medium transition-all hover:bg-white/5 active:bg-white/10"
               style={{
                 color: 'oklch(0.70 0.01 260)',
                 border: '1px solid oklch(0.35 0.015 260 / 30%)',
               }}
             >
-              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? <Check size={18} /> : <Copy size={18} />}
               {copied ? 'تم النسخ' : 'نسخ للحافظة'}
             </button>
           </div>
         ) : (
-          <div className="space-y-4 mt-2">
-            <div className="p-4 rounded-xl text-center" style={{
+          <div className="space-y-3 sm:space-y-4 mt-1 sm:mt-2">
+            <div className="p-4 sm:p-5 rounded-xl text-center" style={{
               background: 'oklch(0.20 0.015 260 / 50%)',
               border: '1px solid oklch(0.30 0.015 260 / 20%)',
             }}>
-              <Upload size={40} className="mx-auto mb-2" style={{ color: 'oklch(0.78 0.15 80)' }} />
-              <p className="text-sm font-medium" style={{ color: 'oklch(0.85 0.005 260)' }}>
+              <Upload size={40} className="mx-auto mb-2.5 sm:mb-3 sm:!w-12 sm:!h-12" style={{ color: 'oklch(0.78 0.15 80)' }} />
+              <p className="text-sm sm:text-base font-medium" style={{ color: 'oklch(0.85 0.005 260)' }}>
                 استورد بياناتك
               </p>
-              <p className="text-xs mt-1" style={{ color: 'oklch(0.50 0.01 260)' }}>
+              <p className="text-xs sm:text-sm mt-1 sm:mt-1.5 leading-relaxed" style={{ color: 'oklch(0.50 0.01 260)' }}>
                 اختر ملف JSON اللي صدرته سابقاً. البيانات الحالية بتنحذف وتتبدل بالبيانات المستوردة.
               </p>
             </div>
@@ -139,13 +139,13 @@ export default function ImportExportDialog({ open, onOpenChange, mode }: ImportE
 
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all"
+              className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-semibold transition-all active:scale-[0.98]"
               style={{
                 background: 'linear-gradient(135deg, oklch(0.78 0.15 80), oklch(0.70 0.18 60))',
                 color: 'oklch(0.15 0.015 260)',
               }}
             >
-              <Upload size={16} />
+              <Upload size={18} />
               اختر ملف JSON
             </button>
           </div>

@@ -54,13 +54,36 @@ const DEFAULT_CATEGORIES: Category[] = [
   { id: 'other', name: 'أخرى', color: '#6B7280' },
 ];
 
+/**
+ * Sanitize app icon URLs - remove developer avatar URLs that were incorrectly saved
+ */
+function sanitizeIconUrl(iconUrl: string): string {
+  if (!iconUrl) return '';
+  const badPatterns = [
+    'avatars.githubusercontent.com',
+    'avatars0.githubusercontent.com',
+    'avatars1.githubusercontent.com',
+    'avatars2.githubusercontent.com',
+    'avatars3.githubusercontent.com',
+    'contrib.rocks',
+    'contributors-img',
+  ];
+  const lower = iconUrl.toLowerCase();
+  if (badPatterns.some(p => lower.includes(p))) return '';
+  return iconUrl;
+}
+
 function loadFromStorage(): { apps: AppItem[]; devices: Device[]; categories: Category[] } {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const data = JSON.parse(stored);
+      const apps = (data.apps || []).map((app: AppItem) => ({
+        ...app,
+        iconUrl: sanitizeIconUrl(app.iconUrl),
+      }));
       return {
-        apps: data.apps || [],
+        apps,
         devices: data.devices || [],
         categories: data.categories?.length ? data.categories : DEFAULT_CATEGORIES,
       };
@@ -183,7 +206,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const data: AppVaultData = JSON.parse(jsonString);
       if (data.apps && Array.isArray(data.apps)) {
-        setApps(data.apps);
+        // Sanitize icon URLs on import to clean stale avatar URLs
+        const cleanedApps = data.apps.map((app: AppItem) => ({
+          ...app,
+          iconUrl: sanitizeIconUrl(app.iconUrl),
+        }));
+        setApps(cleanedApps);
         if (data.devices) setDevices(data.devices);
         if (data.categories?.length) setCategories(data.categories);
         return true;

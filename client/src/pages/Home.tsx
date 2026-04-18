@@ -2,6 +2,9 @@
  * Design: Glass Vault / Frosted Modern
  * Main page - assembles Header, Sidebar, AppCards, Dialogs
  * Dark background with teal accents, glass morphism cards
+ * MOBILE-FIRST: single column on phones, sidebar on desktop
+ * - Mobile: full-width cards, FAB for filters, compact spacing
+ * - Desktop: sidebar + 2-3 column grid
  */
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
@@ -14,8 +17,9 @@ import SettingsDialog from '@/components/SettingsDialog';
 import ImportExportDialog from '@/components/ImportExportDialog';
 import FormatModeBar from '@/components/FormatModeBar';
 import EmptyState from '@/components/EmptyState';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 
 export default function Home() {
   const { apps, getFilteredApps, isFormatMode, setIsFormatMode } = useAppContext();
@@ -39,7 +43,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen relative" style={{ background: 'oklch(0.13 0.015 260)' }}>
+    <div className="min-h-screen min-h-[100dvh] relative" style={{ background: 'oklch(0.13 0.015 260)' }}>
       {/* Subtle background pattern */}
       <div className="fixed inset-0 opacity-[0.03] pointer-events-none"
         style={{
@@ -65,42 +69,53 @@ export default function Home() {
 
       {/* Main Layout */}
       <div className="flex relative">
-        {/* Mobile sidebar toggle */}
+        {/* Mobile: Sheet-based sidebar (RTL: opens from left) */}
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetContent
+            side="left"
+            className="p-0 border-r-0 w-[82%] max-w-[300px]"
+            style={{
+              background: 'oklch(0.15 0.02 260 / 98%)',
+              backdropFilter: 'blur(24px)',
+            }}
+          >
+            <div className="pt-12 h-full overflow-y-auto pb-6">
+              <Sidebar isOpen={true} onClose={() => setSidebarOpen(false)} isMobile />
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {/* Mobile FAB for filters */}
         <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="lg:hidden fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
+          onClick={() => setSidebarOpen(true)}
+          className="lg:hidden fixed bottom-5 left-4 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-xl active:scale-90 transition-transform"
           style={{
             background: 'linear-gradient(135deg, oklch(0.75 0.15 180), oklch(0.60 0.15 180))',
             color: 'oklch(0.15 0.015 260)',
-            boxShadow: '0 0 25px oklch(0.75 0.15 180 / 30%)',
+            boxShadow: '0 4px 25px oklch(0.75 0.15 180 / 35%), 0 0 40px oklch(0.75 0.15 180 / 15%)',
           }}
+          aria-label="فتح الفلاتر"
         >
-          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          <SlidersHorizontal size={20} />
         </button>
 
-        {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div
-            className="lg:hidden fixed inset-0 z-20 bg-black/50"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <Sidebar isOpen={sidebarOpen} />
+        {/* Desktop: Sticky sidebar */}
+        <div className="hidden lg:block">
+          <Sidebar isOpen={true} />
+        </div>
 
         {/* Main Content */}
-        <main className="flex-1 min-h-[calc(100vh-57px)]">
+        <main className="flex-1 min-h-[calc(100vh-57px)] min-h-[calc(100dvh-57px)]">
           {apps.length === 0 ? (
             <EmptyState
               onAddClick={() => { setEditingApp(null); setShowAddDialog(true); }}
               onImportClick={() => setShowImport(true)}
             />
           ) : (
-            <div className="p-4 lg:p-6">
+            <div className="p-3 sm:p-4 lg:p-6">
               {/* Results count */}
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-xs" style={{ color: 'oklch(0.50 0.01 260)' }}>
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <p className="text-xs sm:text-sm" style={{ color: 'oklch(0.55 0.01 260)' }}>
                   {filteredApps.length === apps.length
                     ? `${apps.length} تطبيق`
                     : `${filteredApps.length} من ${apps.length} تطبيق`
@@ -110,7 +125,7 @@ export default function Home() {
 
               {/* Apps Grid */}
               {filteredApps.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                   <AnimatePresence mode="popLayout">
                     {filteredApps.map((app, i) => (
                       <AppCard key={app.id} app={app} index={i} onEdit={handleEdit} />
@@ -121,9 +136,9 @@ export default function Home() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center py-16"
+                  className="text-center py-16 sm:py-20"
                 >
-                  <p className="text-sm" style={{ color: 'oklch(0.45 0.01 260)' }}>
+                  <p className="text-sm sm:text-base" style={{ color: 'oklch(0.50 0.01 260)' }}>
                     لا توجد نتائج مطابقة للفلتر الحالي
                   </p>
                 </motion.div>

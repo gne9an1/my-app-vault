@@ -1,6 +1,8 @@
 /*
  * Design: Glass Vault / Frosted Modern
  * Sidebar with glass morphism, teal accents, category/device filters
+ * MOBILE-FIRST: large touch targets (min 44px) inside Sheet on mobile
+ * Desktop: compact sticky sidebar
  */
 import { useAppContext } from '@/contexts/AppContext';
 import { Layers, Smartphone, Github, Play, Box, Tag, ChevronDown, ChevronUp } from 'lucide-react';
@@ -9,9 +11,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface SidebarProps {
   isOpen: boolean;
+  onClose?: () => void;
+  isMobile?: boolean;
 }
 
-export default function Sidebar({ isOpen }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const {
     categories, devices, apps,
     activeFilter, setActiveFilter,
@@ -24,22 +28,58 @@ export default function Sidebar({ isOpen }: SidebarProps) {
   const [showSources, setShowSources] = useState(true);
 
   const sourceOptions = [
-    { id: 'all', name: 'الكل', icon: <Layers size={14} />, count: apps.length },
-    { id: 'github', name: 'GitHub', icon: <Github size={14} />, count: apps.filter(a => a.source === 'github').length },
-    { id: 'playstore', name: 'Google Play', icon: <Play size={14} />, count: apps.filter(a => a.source === 'playstore').length },
-    { id: 'fdroid', name: 'F-Droid', icon: <Box size={14} />, count: apps.filter(a => a.source === 'fdroid').length },
-    { id: 'manual', name: 'يدوي', icon: <Tag size={14} />, count: apps.filter(a => a.source === 'manual').length },
+    { id: 'all', name: 'الكل', icon: <Layers size={15} />, count: apps.length },
+    { id: 'github', name: 'GitHub', icon: <Github size={15} />, count: apps.filter(a => a.source === 'github').length },
+    { id: 'playstore', name: 'Google Play', icon: <Play size={15} />, count: apps.filter(a => a.source === 'playstore').length },
+    { id: 'fdroid', name: 'F-Droid', icon: <Box size={15} />, count: apps.filter(a => a.source === 'fdroid').length },
+    { id: 'manual', name: 'يدوي', icon: <Tag size={15} />, count: apps.filter(a => a.source === 'manual').length },
   ];
 
   const getCategoryCount = (catId: string) => apps.filter(a => a.category === catId).length;
 
+  // On mobile, close sidebar after selecting a filter
+  function handleFilterClick(fn: () => void) {
+    fn();
+    if (onClose && isMobile) {
+      setTimeout(onClose, 150);
+    }
+  }
+
+  // When used inside Sheet (mobile), render without fixed positioning
+  if (isMobile) {
+    return (
+      <div className="p-4 space-y-4">
+        <h2 className="text-base font-bold mb-3" style={{
+          color: 'oklch(0.90 0.005 260)',
+          fontFamily: "'Space Grotesk', 'IBM Plex Sans Arabic', sans-serif",
+        }}>
+          الفلاتر
+        </h2>
+        {renderContent()}
+      </div>
+    );
+  }
+
+  if (!isOpen) return null;
+
+  // Desktop: sticky sidebar
   return (
     <aside
-      className={`glass-sidebar fixed lg:sticky top-[57px] right-0 h-[calc(100vh-57px)] z-30 transition-all duration-300 overflow-y-auto ${
-        isOpen ? 'w-64 translate-x-0' : 'w-0 translate-x-full lg:w-64 lg:translate-x-0'
-      }`}
+      className="glass-sidebar sticky top-[57px] h-[calc(100vh-57px)] w-56 xl:w-64 overflow-y-auto shrink-0"
     >
-      <div className="p-4 space-y-5 w-64">
+      <div className="p-4 space-y-5">
+        {renderContent()}
+      </div>
+    </aside>
+  );
+
+  function renderContent() {
+    const itemClass = isMobile
+      ? "flex items-center justify-between w-full px-3.5 py-3 rounded-xl text-sm transition-all"
+      : "flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm transition-all";
+
+    return (
+      <>
         {/* Sources Filter */}
         <div>
           <button
@@ -56,14 +96,14 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="space-y-0.5 overflow-hidden"
+                className="space-y-0.5 sm:space-y-1 overflow-hidden"
               >
                 {sourceOptions.map(src => (
                   <button
                     key={src.id}
-                    onClick={() => setActiveSourceFilter(src.id)}
-                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-all ${
-                      activeSourceFilter === src.id ? '' : 'hover:bg-white/5'
+                    onClick={() => handleFilterClick(() => setActiveSourceFilter(src.id))}
+                    className={`${itemClass} ${
+                      activeSourceFilter === src.id ? '' : 'hover:bg-white/5 active:bg-white/10'
                     }`}
                     style={activeSourceFilter === src.id ? {
                       background: 'oklch(0.75 0.15 180 / 12%)',
@@ -105,12 +145,12 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="space-y-0.5 overflow-hidden"
+                className="space-y-0.5 sm:space-y-1 overflow-hidden"
               >
                 <button
-                  onClick={() => setActiveFilter('all')}
-                  className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-all ${
-                    activeFilter === 'all' ? '' : 'hover:bg-white/5'
+                  onClick={() => handleFilterClick(() => setActiveFilter('all'))}
+                  className={`${itemClass} ${
+                    activeFilter === 'all' ? '' : 'hover:bg-white/5 active:bg-white/10'
                   }`}
                   style={activeFilter === 'all' ? {
                     background: 'oklch(0.75 0.15 180 / 12%)',
@@ -122,7 +162,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                   }}
                 >
                   <span className="flex items-center gap-2">
-                    <Layers size={14} />
+                    <Layers size={15} />
                     الكل
                   </span>
                   <span className="text-xs opacity-60">{apps.length}</span>
@@ -130,9 +170,9 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 {categories.map(cat => (
                   <button
                     key={cat.id}
-                    onClick={() => setActiveFilter(cat.id)}
-                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-all ${
-                      activeFilter === cat.id ? '' : 'hover:bg-white/5'
+                    onClick={() => handleFilterClick(() => setActiveFilter(cat.id))}
+                    className={`${itemClass} ${
+                      activeFilter === cat.id ? '' : 'hover:bg-white/5 active:bg-white/10'
                     }`}
                     style={activeFilter === cat.id ? {
                       background: `${cat.color}15`,
@@ -144,7 +184,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                     }}
                   >
                     <span className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: cat.color }} />
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cat.color }} />
                       {cat.name}
                     </span>
                     <span className="text-xs opacity-60">{getCategoryCount(cat.id)}</span>
@@ -174,12 +214,12 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="space-y-0.5 overflow-hidden"
+                className="space-y-0.5 sm:space-y-1 overflow-hidden"
               >
                 <button
-                  onClick={() => setActiveDeviceFilter('all')}
-                  className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-all ${
-                    activeDeviceFilter === 'all' ? '' : 'hover:bg-white/5'
+                  onClick={() => handleFilterClick(() => setActiveDeviceFilter('all'))}
+                  className={`${itemClass} ${
+                    activeDeviceFilter === 'all' ? '' : 'hover:bg-white/5 active:bg-white/10'
                   }`}
                   style={activeDeviceFilter === 'all' ? {
                     background: 'oklch(0.75 0.15 180 / 12%)',
@@ -191,16 +231,16 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                   }}
                 >
                   <span className="flex items-center gap-2">
-                    <Smartphone size={14} />
+                    <Smartphone size={15} />
                     كل الأجهزة
                   </span>
                 </button>
                 {devices.map(dev => (
                   <button
                     key={dev.id}
-                    onClick={() => setActiveDeviceFilter(dev.id)}
-                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-all ${
-                      activeDeviceFilter === dev.id ? '' : 'hover:bg-white/5'
+                    onClick={() => handleFilterClick(() => setActiveDeviceFilter(dev.id))}
+                    className={`${itemClass} ${
+                      activeDeviceFilter === dev.id ? '' : 'hover:bg-white/5 active:bg-white/10'
                     }`}
                     style={activeDeviceFilter === dev.id ? {
                       background: 'oklch(0.75 0.15 180 / 12%)',
@@ -212,7 +252,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                     }}
                   >
                     <span className="flex items-center gap-2">
-                      <span>{dev.icon}</span>
+                      <span className="text-base">{dev.icon}</span>
                       {dev.name}
                     </span>
                     <span className="text-xs opacity-60">
@@ -221,7 +261,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                   </button>
                 ))}
                 {devices.length === 0 && (
-                  <p className="text-xs px-3 py-2" style={{ color: 'oklch(0.45 0.01 260)' }}>
+                  <p className="text-xs sm:text-sm px-3 py-3" style={{ color: 'oklch(0.45 0.01 260)' }}>
                     لم تضف أي جهاز بعد
                   </p>
                 )}
@@ -229,7 +269,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             )}
           </AnimatePresence>
         </div>
-      </div>
-    </aside>
-  );
+      </>
+    );
+  }
 }
