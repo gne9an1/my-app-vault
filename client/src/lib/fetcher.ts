@@ -34,10 +34,36 @@ function parsePlayStoreUrl(url: string): string | null {
  * Extract F-Droid package name from URL
  */
 function parseFDroidUrl(url: string): string | null {
-  // https://f-droid.org/packages/com.example.app/
-  // https://f-droid.org/en/packages/com.example.app/
   const match = url.match(/f-droid\.org(?:\/[a-z]{2})?\/packages\/([a-zA-Z0-9._]+)/);
   return match ? match[1] : null;
+}
+
+/**
+ * Fetch HTML through multiple CORS proxies with fallback
+ */
+async function fetchWithProxy(targetUrl: string, timeoutMs = 10000): Promise<string | null> {
+  const proxies = [
+    (u: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
+    (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  ];
+
+  for (const makeUrl of proxies) {
+    try {
+      const proxyUrl = makeUrl(targetUrl);
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(timeoutMs) });
+      if (res.ok) {
+        const html = await res.text();
+        // Verify we got actual content (not an error page)
+        if (html.length > 1000) {
+          return html;
+        }
+      }
+    } catch {
+      // Try next proxy
+    }
+  }
+  return null;
 }
 
 /**
@@ -82,71 +108,145 @@ async function fetchGitHubData(url: string): Promise<FetchedAppData> {
 }
 
 /**
- * Fetch Google Play data using a CORS proxy approach
- * Since we can't directly scrape Google Play from the browser,
- * we'll use available metadata from the URL
+ * Parse JSON-LD structured data from Google Play HTML
+ */
+function parseJsonLd(html: string): {
+  name?: string;
+  description?: string;
+  image?: string;
+  version?: string;
+} {
+  try {
+    const match = html.match(/application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
+    if (match) {
+      const data = JSON.parse(match[1]);
+      if (data['@type'] === 'SoftwareApplication') {
+        return {
+          name: data.name,
+          description: data.description,
+          image: data.image,
+          version: data.softwareVersion,
+        };
+      }
+    }
+  } catch {
+    // JSON parse failed
+  }
+  return {};
+}
+
+/**
+ * Parse OpenGraph meta tags from HTML
+ */
+function parseOgMeta(html: string): {
+  title?: string;
+  description?: string;
+  image?: string;
+} {
+  const result: { title?: string; description?: string; image?: string } = {};
+
+  const titleMatch = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i);
+  if (titleMatch) result.title = titleMatch[1];
+
+  const descMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i) ||
+                    html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i);
+  if (descMatch) result.description = descMatch[1];
+
+  const imgMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
+  if (imgMatch) result.image = imgMatch[1];
+
+  return result;
+}
+
+/**
+ * Try to extract version from Google Play HTML data
+ */
+function extractPlayStoreVersion(html: string): string {
+  // Google Play embeds version numbers in their data arrays
+  // Look for version-like patterns near known markers
+  const versionPatterns = [
+    // softwareVersion in structured data
+    /"softwareVersion"\s*:\s*"([^"]+)"/i,
+    // Version in data arrays - look for the first version-like string
+    /\[\[\["(\d+\.\d+\.\d+[^"]*?)"\]\]/,
+  ];
+
+  for (const pattern of versionPatterns) {
+    const match = html.match(pattern);
+    if (match) return match[1];
+  }
+
+  // Try to find version from all version-like strings in the page
+  // Google Play often has multiple version strings; pick the first one that looks like a real version
+  const allVersions = html.match(/"(\d+\.\d+\.\d+\.\d+)"/g);
+  if (allVersions && allVersions.length > 0) {
+    // Return the first (usually latest) version found
+    return allVersions[0].replace(/"/g, '');
+  }
+
+  return '';
+}
+
+/**
+ * Fetch Google Play data using CORS proxy + JSON-LD + OG meta
  */
 async function fetchPlayStoreData(url: string): Promise<FetchedAppData> {
   const packageName = parsePlayStoreUrl(url);
   if (!packageName) throw new Error('رابط Google Play غير صالح');
 
-  // Try fetching through a public API or proxy
-  // Using a simple approach: extract what we can from the package name
-  // and provide the Play Store page as download link
+  // Default fallback name from package
   let name = packageName.split('.').pop() || packageName;
-  // Capitalize first letter
   name = name.charAt(0).toUpperCase() + name.slice(1);
-
   let description = '';
   let iconUrl = '';
   let version = '';
 
-  // Try to get data from Google Play web page through a CORS proxy
-  try {
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
-    if (res.ok) {
-      const html = await res.text();
+  // Fetch the page through CORS proxy
+  const html = await fetchWithProxy(
+    `https://play.google.com/store/apps/details?id=${packageName}&hl=en`
+  );
 
-      // Extract app name
-      const titleMatch = html.match(/<h1[^>]*itemprop="name"[^>]*>([^<]+)<\/h1>/i) ||
-                         html.match(/<h1[^>]*>\s*<span[^>]*>([^<]+)<\/span>/i) ||
-                         html.match(/<title>([^-<]+)/i);
-      if (titleMatch) {
-        name = titleMatch[1].trim().replace(/ - Apps on Google Play$/, '').replace(/ - التطبيقات على Google Play$/, '');
-      }
+  if (html) {
+    // 1. Try JSON-LD (most reliable, structured data)
+    const jsonLd = parseJsonLd(html);
+    if (jsonLd.name) name = jsonLd.name;
+    if (jsonLd.description) description = jsonLd.description;
+    if (jsonLd.image) iconUrl = jsonLd.image;
+    if (jsonLd.version) version = jsonLd.version;
 
-      // Extract icon
-      const iconMatch = html.match(/itemprop="image"[^>]*content="([^"]+)"/i) ||
-                        html.match(/class="[^"]*T75of[^"]*"[^>]*src="([^"]+)"/i);
-      if (iconMatch) {
-        iconUrl = iconMatch[1];
-      }
-
-      // Extract description snippet
-      const descMatch = html.match(/itemprop="description"[^>]*content="([^"]+)"/i) ||
-                        html.match(/<meta name="description" content="([^"]+)"/i);
-      if (descMatch) {
-        description = descMatch[1].substring(0, 200);
-      }
-
-      // Extract version
-      const versionMatch = html.match(/Current Version[^<]*<[^>]*>([^<]+)/i) ||
-                           html.match(/\[\["([[\d.]+)"\]\]/);
-      if (versionMatch) {
-        version = versionMatch[1].trim();
+    // 2. Fallback to OG meta tags
+    const og = parseOgMeta(html);
+    if (!name || name === (packageName.split('.').pop() || '').charAt(0).toUpperCase() + (packageName.split('.').pop() || '').slice(1)) {
+      if (og.title) {
+        name = og.title
+          .replace(/ - Apps on Google Play$/i, '')
+          .replace(/ - التطبيقات على Google Play$/i, '')
+          .trim();
       }
     }
-  } catch {
-    // CORS proxy failed, use basic info
+    if (!description && og.description) description = og.description;
+    if (!iconUrl && og.image) iconUrl = og.image;
+
+    // 3. Try to extract version if not found yet
+    if (!version) {
+      version = extractPlayStoreVersion(html);
+    }
+
+    // Make icon URL use higher resolution
+    if (iconUrl && iconUrl.includes('play-lh.googleusercontent.com')) {
+      // Append size parameter for better quality
+      if (!iconUrl.includes('=')) {
+        iconUrl += '=s256-rw';
+      }
+    }
   }
 
   return {
     name,
-    description: description || `تطبيق من Google Play (${packageName})`,
+    description: description || `تطبيق من Google Play`,
     iconUrl,
     version,
-    downloadPageUrl: url,
+    downloadPageUrl: `https://play.google.com/store/apps/details?id=${packageName}`,
     source: 'playstore',
   };
 }
@@ -178,34 +278,27 @@ async function fetchFDroidData(url: string): Promise<FetchedAppData> {
       }
     }
   } catch {
-    // API failed, try scraping
-    try {
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
-      if (res.ok) {
-        const html = await res.text();
-        const titleMatch = html.match(/<h3[^>]*class="package-name"[^>]*>([^<]+)/i) ||
-                           html.match(/<title>([^|<]+)/i);
-        if (titleMatch) name = titleMatch[1].trim();
+    // API failed, try scraping via proxy
+    const html = await fetchWithProxy(url);
+    if (html) {
+      const og = parseOgMeta(html);
+      if (og.title) name = og.title.replace(/\s*\|.*$/, '').replace(/\s*[-–].*F-Droid.*$/i, '').trim();
+      if (og.description) description = og.description;
+      if (og.image) iconUrl = og.image;
 
-        const descMatch = html.match(/<div[^>]*class="package-summary"[^>]*>([^<]+)/i);
-        if (descMatch) description = descMatch[1].trim();
+      const titleMatch = html.match(/<h3[^>]*class="package-name"[^>]*>([^<]+)/i) ||
+                         html.match(/<title>([^|<]+)/i);
+      if (titleMatch && !og.title) name = titleMatch[1].trim();
 
-        const iconMatch = html.match(/<img[^>]*class="package-icon"[^>]*src="([^"]+)"/i);
-        if (iconMatch) iconUrl = iconMatch[1].startsWith('http') ? iconMatch[1] : `https://f-droid.org${iconMatch[1]}`;
-
-        const versionMatch = html.match(/Latest Version[^<]*<[^>]*>([^<]+)/i) ||
-                             html.match(/<b[^>]*class="package-version"[^>]*>([^<]+)/i);
-        if (versionMatch) version = versionMatch[1].trim();
-      }
-    } catch {
-      // All failed
+      const versionMatch = html.match(/Latest Version[^<]*<[^>]*>([^<]+)/i) ||
+                           html.match(/<b[^>]*class="package-version"[^>]*>([^<]+)/i);
+      if (versionMatch) version = versionMatch[1].trim();
     }
   }
 
   return {
     name,
-    description: description || `تطبيق من F-Droid (${packageName})`,
+    description: description || `تطبيق من F-Droid`,
     iconUrl,
     version,
     downloadPageUrl: url,
