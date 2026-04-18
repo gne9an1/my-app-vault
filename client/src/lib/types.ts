@@ -10,6 +10,7 @@ export interface AppItem {
   sourceUrl: string;
   downloadPageUrl: string;
   version: string;
+  developer: string;
   category: string;
   priority: Priority;
   devices: string[];
@@ -45,5 +46,6 @@ export interface FetchedAppData {
   iconUrl: string;
   version: string;
   downloadPageUrl: string;
+  developer: string;
   source: AppSource;
 }

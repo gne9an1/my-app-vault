@@ -109,6 +109,11 @@ export default function AppCard({ app, index, onEdit }: AppCardProps) {
               }}>
                 {app.name}
               </h3>
+              {app.developer && (
+                <p className="text-[11px] mt-0.5" style={{ color: 'oklch(0.60 0.10 180)' }}>
+                  {app.developer}
+                </p>
+              )}
               {app.description && (
                 <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'oklch(0.55 0.01 260)' }}>
                   {app.description}

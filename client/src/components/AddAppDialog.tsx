@@ -30,6 +30,7 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
   const [priority, setPriority] = useState<Priority>('medium');
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
+  const [developer, setDeveloper] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [isManualMode, setIsManualMode] = useState(false);
@@ -46,6 +47,7 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
       setPriority(editApp.priority);
       setSelectedDevices(editApp.devices);
       setNotes(editApp.notes);
+      setDeveloper(editApp.developer || '');
       setUrl(editApp.sourceUrl);
       setIsManualMode(true);
     } else {
@@ -65,6 +67,7 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
     setPriority('medium');
     setSelectedDevices([]);
     setNotes('');
+    setDeveloper('');
     setFetchError('');
     setIsManualMode(false);
   }
@@ -82,6 +85,7 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
       setVersion(data.version);
       setDownloadPageUrl(data.downloadPageUrl);
       setSource(data.source);
+      setDeveloper(data.developer || '');
       setIsManualMode(true);
       toast.success('تم سحب بيانات التطبيق بنجاح');
     } catch (err: any) {
@@ -111,6 +115,7 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
       sourceUrl: url.trim(),
       downloadPageUrl: downloadPageUrl.trim() || url.trim(),
       version: version.trim(),
+      developer: developer.trim(),
       category,
       priority,
       devices: selectedDevices,

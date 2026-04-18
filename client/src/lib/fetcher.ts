@@ -12,14 +12,20 @@ export function detectSource(url: string): AppSource | null {
 }
 
 /**
- * Extract GitHub owner/repo from URL
+ * Extract GitHub owner/repo and optional tag from URL
  */
-function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
+function parseGitHubUrl(url: string): { owner: string; repo: string; tag?: string } | null {
   const match = url.match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
-  if (match) {
-    return { owner: match[1], repo: match[2].replace(/\.git$/, '') };
-  }
-  return null;
+  if (!match) return null;
+
+  const owner = match[1];
+  const repo = match[2].replace(/\.git$/, '');
+
+  // Check if URL points to a specific release tag
+  const tagMatch = url.match(/releases\/tag\/([^\/\?#]+)/);
+  const tag = tagMatch ? decodeURIComponent(tagMatch[1]) : undefined;
+
+  return { owner, repo, tag };
 }
 
 /**
@@ -54,7 +60,6 @@ async function fetchWithProxy(targetUrl: string, timeoutMs = 10000): Promise<str
       const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(timeoutMs) });
       if (res.ok) {
         const html = await res.text();
-        // Verify we got actual content (not an error page)
         if (html.length > 1000) {
           return html;
         }
@@ -67,35 +72,104 @@ async function fetchWithProxy(targetUrl: string, timeoutMs = 10000): Promise<str
 }
 
 /**
- * Fetch GitHub repo data
+ * Try to find app icon from GitHub README (first image that looks like a logo/icon)
+ */
+async function fetchGitHubAppIcon(owner: string, repo: string): Promise<string> {
+  try {
+    const readmeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!readmeRes.ok) return '';
+
+    const readmeData = await readmeRes.json();
+    const content = atob(readmeData.content.replace(/\n/g, ''));
+
+    // Find first image in README (usually the logo)
+    const imgPatterns = [
+      // Markdown images: ![alt](url)
+      /!\[[^\]]*(?:logo|icon|banner)[^\]]*\]\(([^)]+)\)/i,
+      // HTML images with logo/icon in src or alt
+      /<img[^>]*(?:logo|icon)[^>]*src=["']([^"']+)["']/i,
+      // Any first markdown image as fallback
+      /!\[[^\]]*\]\(([^)]+)\)/,
+    ];
+
+    for (const pattern of imgPatterns) {
+      const match = content.match(pattern);
+      if (match) {
+        let imgUrl = match[1];
+        // Skip badge images
+        if (imgUrl.includes('shields.io') || imgUrl.includes('badge') || imgUrl.includes('img.shields')) {
+          continue;
+        }
+        // Convert relative URLs to absolute
+        if (!imgUrl.startsWith('http')) {
+          imgUrl = `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${imgUrl}`;
+        }
+        return imgUrl;
+      }
+    }
+  } catch {
+    // README fetch failed
+  }
+  return '';
+}
+
+/**
+ * Fetch GitHub repo data - supports specific release tag URLs
  */
 async function fetchGitHubData(url: string): Promise<FetchedAppData> {
   const parsed = parseGitHubUrl(url);
   if (!parsed) throw new Error('رابط GitHub غير صالح');
 
-  const { owner, repo } = parsed;
+  const { owner, repo, tag } = parsed;
 
   // Fetch repo info
   const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
   if (!repoRes.ok) throw new Error('لم يتم العثور على المستودع');
   const repoData = await repoRes.json();
 
-  // Try to fetch latest release
   let version = '';
   let releasesUrl = `https://github.com/${owner}/${repo}/releases`;
-  try {
-    const relRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`);
-    if (relRes.ok) {
-      const relData = await relRes.json();
-      version = relData.tag_name || '';
-      releasesUrl = relData.html_url || releasesUrl;
+  const developer = repoData.owner?.login || owner;
+
+  if (tag) {
+    // User provided a specific release tag URL - use that exact version
+    version = tag;
+    releasesUrl = `https://github.com/${owner}/${repo}/releases/tag/${encodeURIComponent(tag)}`;
+
+    // Verify the tag exists via API
+    try {
+      const tagRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/tags/${encodeURIComponent(tag)}`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (tagRes.ok) {
+        const tagData = await tagRes.json();
+        version = tagData.tag_name || tag;
+        releasesUrl = tagData.html_url || releasesUrl;
+      }
+    } catch {
+      // Tag API failed, use the tag from URL as-is
     }
-  } catch {
-    // No releases, that's ok
+  } else {
+    // No specific tag - check if URL points to /releases page, fetch latest
+    try {
+      const relRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (relRes.ok) {
+        const relData = await relRes.json();
+        version = relData.tag_name || '';
+        releasesUrl = relData.html_url || releasesUrl;
+      }
+    } catch {
+      // No releases
+    }
   }
 
-  // Use owner avatar as icon fallback
-  const iconUrl = repoData.owner?.avatar_url || '';
+  // Try to get app icon from README first, fallback to owner avatar
+  const readmeIcon = await fetchGitHubAppIcon(owner, repo);
+  const iconUrl = readmeIcon || repoData.owner?.avatar_url || '';
 
   return {
     name: repoData.name || repo,
@@ -103,6 +177,7 @@ async function fetchGitHubData(url: string): Promise<FetchedAppData> {
     iconUrl,
     version,
     downloadPageUrl: releasesUrl,
+    developer,
     source: 'github',
   };
 }
@@ -115,6 +190,7 @@ function parseJsonLd(html: string): {
   description?: string;
   image?: string;
   version?: string;
+  developer?: string;
 } {
   try {
     const match = html.match(/application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
@@ -126,6 +202,7 @@ function parseJsonLd(html: string): {
           description: data.description,
           image: data.image,
           version: data.softwareVersion,
+          developer: data.author?.name,
         };
       }
     }
@@ -162,12 +239,8 @@ function parseOgMeta(html: string): {
  * Try to extract version from Google Play HTML data
  */
 function extractPlayStoreVersion(html: string): string {
-  // Google Play embeds version numbers in their data arrays
-  // Look for version-like patterns near known markers
   const versionPatterns = [
-    // softwareVersion in structured data
     /"softwareVersion"\s*:\s*"([^"]+)"/i,
-    // Version in data arrays - look for the first version-like string
     /\[\[\["(\d+\.\d+\.\d+[^"]*?)"\]\]/,
   ];
 
@@ -176,11 +249,8 @@ function extractPlayStoreVersion(html: string): string {
     if (match) return match[1];
   }
 
-  // Try to find version from all version-like strings in the page
-  // Google Play often has multiple version strings; pick the first one that looks like a real version
   const allVersions = html.match(/"(\d+\.\d+\.\d+\.\d+)"/g);
   if (allVersions && allVersions.length > 0) {
-    // Return the first (usually latest) version found
     return allVersions[0].replace(/"/g, '');
   }
 
@@ -194,27 +264,25 @@ async function fetchPlayStoreData(url: string): Promise<FetchedAppData> {
   const packageName = parsePlayStoreUrl(url);
   if (!packageName) throw new Error('رابط Google Play غير صالح');
 
-  // Default fallback name from package
   let name = packageName.split('.').pop() || packageName;
   name = name.charAt(0).toUpperCase() + name.slice(1);
   let description = '';
   let iconUrl = '';
   let version = '';
+  let developer = '';
 
-  // Fetch the page through CORS proxy
   const html = await fetchWithProxy(
     `https://play.google.com/store/apps/details?id=${packageName}&hl=en`
   );
 
   if (html) {
-    // 1. Try JSON-LD (most reliable, structured data)
     const jsonLd = parseJsonLd(html);
     if (jsonLd.name) name = jsonLd.name;
     if (jsonLd.description) description = jsonLd.description;
     if (jsonLd.image) iconUrl = jsonLd.image;
     if (jsonLd.version) version = jsonLd.version;
+    if (jsonLd.developer) developer = jsonLd.developer;
 
-    // 2. Fallback to OG meta tags
     const og = parseOgMeta(html);
     if (!name || name === (packageName.split('.').pop() || '').charAt(0).toUpperCase() + (packageName.split('.').pop() || '').slice(1)) {
       if (og.title) {
@@ -227,14 +295,11 @@ async function fetchPlayStoreData(url: string): Promise<FetchedAppData> {
     if (!description && og.description) description = og.description;
     if (!iconUrl && og.image) iconUrl = og.image;
 
-    // 3. Try to extract version if not found yet
     if (!version) {
       version = extractPlayStoreVersion(html);
     }
 
-    // Make icon URL use higher resolution
     if (iconUrl && iconUrl.includes('play-lh.googleusercontent.com')) {
-      // Append size parameter for better quality
       if (!iconUrl.includes('=')) {
         iconUrl += '=s256-rw';
       }
@@ -247,6 +312,7 @@ async function fetchPlayStoreData(url: string): Promise<FetchedAppData> {
     iconUrl,
     version,
     downloadPageUrl: `https://play.google.com/store/apps/details?id=${packageName}`,
+    developer,
     source: 'playstore',
   };
 }
@@ -263,8 +329,8 @@ async function fetchFDroidData(url: string): Promise<FetchedAppData> {
   let description = '';
   let iconUrl = '';
   let version = '';
+  let developer = '';
 
-  // Try F-Droid API
   try {
     const apiUrl = `https://f-droid.org/api/v1/packages/${packageName}`;
     const res = await fetch(apiUrl, { signal: AbortSignal.timeout(8000) });
@@ -273,12 +339,12 @@ async function fetchFDroidData(url: string): Promise<FetchedAppData> {
       name = data.name || name;
       description = data.summary || data.description?.substring(0, 200) || '';
       version = data.suggestedVersionName || '';
+      developer = data.authorName || '';
       if (data.icon) {
         iconUrl = `https://f-droid.org/repo/icons-640/${data.icon}`;
       }
     }
   } catch {
-    // API failed, try scraping via proxy
     const html = await fetchWithProxy(url);
     if (html) {
       const og = parseOgMeta(html);
@@ -302,6 +368,7 @@ async function fetchFDroidData(url: string): Promise<FetchedAppData> {
     iconUrl,
     version,
     downloadPageUrl: url,
+    developer,
     source: 'fdroid',
   };
 }
