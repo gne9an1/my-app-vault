@@ -30,13 +30,13 @@ const priorityConfig = {
 };
 
 export default function AppCard({ app, index, onEdit }: AppCardProps) {
-  const { deleteApp, toggleAppChecked, isFormatMode, categories, devices } = useAppContext();
+  const { deleteApp, toggleAppChecked, isFormatMode, categories, smartGroups } = useAppContext();
   const [showNotes, setShowNotes] = useState(false);
 
   const source = sourceConfig[app.source];
   const priority = priorityConfig[app.priority];
   const category = categories.find(c => c.id === app.category);
-  const appDevices = devices.filter(d => app.devices.includes(d.id));
+  const appGroups = smartGroups.filter(g => g.appIds.includes(app.id));
 
   const handleDownloadClick = () => {
     if (app.downloadPageUrl) {
@@ -156,16 +156,17 @@ export default function AppCard({ app, index, onEdit }: AppCardProps) {
             )}
           </div>
 
-          {/* Devices */}
-          {appDevices.length > 0 && (
+          {/* Groups */}
+          {appGroups.length > 0 && (
             <div className="flex items-center gap-1 sm:gap-1.5 mt-1.5 sm:mt-2 flex-wrap">
-              {appDevices.map(dev => (
-                <span key={dev.id} className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-[11px]"
+              {appGroups.map(group => (
+                <span key={group.id} className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-[11px]"
                   style={{
-                    background: 'oklch(0.22 0.015 260 / 50%)',
-                    color: 'oklch(0.60 0.01 260)',
+                    background: 'oklch(0.22 0.02 200 / 40%)',
+                    color: 'oklch(0.70 0.06 200)',
+                    border: '1px solid oklch(0.40 0.04 200 / 20%)',
                   }}>
-                  {dev.icon} {dev.name}
+                  {group.icon} {group.name}
                 </span>
               ))}
             </div>

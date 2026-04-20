@@ -1,17 +1,17 @@
 /*
- * Design: Glass Vault / Frosted Modern
- * Format mode bar - appears when format mode is active
+ * Design: Glass Vault / Frosted Modern - Vibrant refresh
+ * Format mode bar - uses smartGroups (فرز حسب) instead of old devices
  * MOBILE-FIRST: compact single-row on phones, expanded on desktop
  */
 import { useAppContext } from '@/contexts/AppContext';
-import { Smartphone, RotateCcw, XCircle } from 'lucide-react';
+import { Filter, RotateCcw, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function FormatModeBar() {
   const {
     isFormatMode, setIsFormatMode,
     formatDeviceId, setFormatDeviceId,
-    devices, getFilteredApps, resetAllChecks,
+    smartGroups, getFilteredApps, resetAllChecks,
   } = useAppContext();
 
   if (!isFormatMode) return null;
@@ -30,15 +30,14 @@ export default function FormatModeBar() {
       style={{
         background: 'linear-gradient(135deg, oklch(0.22 0.04 80 / 90%), oklch(0.18 0.03 60 / 90%))',
         backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid oklch(0.78 0.15 80 / 25%)',
+        borderBottom: '1px solid oklch(0.82 0.16 80 / 25%)',
       }}
     >
       <div className="container py-2 sm:py-3">
-        {/* Mobile: compact row / Desktop: spacious row */}
         <div className="flex items-center justify-between gap-2 sm:gap-3">
-          {/* Left: icon + device selector */}
+          {/* Left: icon + group selector */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Smartphone size={16} className="shrink-0 hidden sm:block" style={{ color: 'oklch(0.78 0.15 80)' }} />
+            <Filter size={16} className="shrink-0 hidden sm:block" style={{ color: 'oklch(0.82 0.16 80)' }} />
             <select
               value={formatDeviceId}
               onChange={(e) => setFormatDeviceId(e.target.value)}
@@ -49,9 +48,9 @@ export default function FormatModeBar() {
                 color: 'oklch(0.90 0.005 260)',
               }}
             >
-              <option value="all">كل الأجهزة</option>
-              {devices.map(dev => (
-                <option key={dev.id} value={dev.id}>{dev.icon} {dev.name}</option>
+              <option value="all">كل التطبيقات</option>
+              {smartGroups.map(group => (
+                <option key={group.id} value={group.id}>{group.icon} {group.name}</option>
               ))}
             </select>
           </div>
@@ -61,13 +60,13 @@ export default function FormatModeBar() {
             <div className="flex-1 h-2 sm:h-2.5 rounded-full overflow-hidden" style={{ background: 'oklch(0.15 0.015 260 / 50%)' }}>
               <motion.div
                 className="h-full rounded-full"
-                style={{ background: 'linear-gradient(90deg, oklch(0.75 0.15 180), oklch(0.78 0.15 80))' }}
+                style={{ background: 'linear-gradient(90deg, oklch(0.78 0.16 170), oklch(0.82 0.16 80))' }}
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.5 }}
               />
             </div>
-            <span className="text-xs sm:text-sm font-mono shrink-0" style={{ color: 'oklch(0.78 0.15 80)' }}>
+            <span className="text-xs sm:text-sm font-mono shrink-0" style={{ color: 'oklch(0.82 0.16 80)' }}>
               {checkedCount}/{totalCount}
             </span>
           </div>

@@ -19,7 +19,7 @@ interface AddAppDialogProps {
 }
 
 export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDialogProps) {
-  const { addApp, updateApp, categories, devices } = useAppContext();
+  const { addApp, updateApp, categories, smartGroups } = useAppContext();
 
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
@@ -133,12 +133,12 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
   }
 
   const inputStyle = {
-    background: 'oklch(0.18 0.015 260 / 70%)',
-    border: '1px solid oklch(0.35 0.015 260 / 30%)',
-    color: 'oklch(0.92 0.005 260)',
+    background: 'oklch(0.20 0.02 260 / 85%)',
+    border: '1px solid oklch(0.45 0.03 260 / 45%)',
+    color: 'oklch(0.95 0.005 260)',
   };
 
-  const labelStyle = { color: 'oklch(0.65 0.01 260)' };
+  const labelStyle = { color: 'oklch(0.72 0.02 200)' };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -356,32 +356,32 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
                 </div>
               </div>
 
-              {/* Devices */}
-              {devices.length > 0 && (
+              {/* Smart Groups - فرز حسب */}
+              {smartGroups.length > 0 && (
                 <div>
-                  <label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block" style={labelStyle}>الأجهزة (اختياري)</label>
+                  <label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block" style={labelStyle}>فرز حسب (اختياري)</label>
                   <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                    {devices.map(dev => (
+                    {smartGroups.map(group => (
                       <button
-                        key={dev.id}
-                        onClick={() => toggleDevice(dev.id)}
+                        key={group.id}
+                        onClick={() => toggleDevice(group.id)}
                         className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm transition-all"
-                        style={selectedDevices.includes(dev.id) ? {
-                          background: 'oklch(0.75 0.15 180 / 15%)',
-                          color: 'oklch(0.85 0.12 180)',
-                          border: '1px solid oklch(0.75 0.15 180 / 30%)',
+                        style={selectedDevices.includes(group.id) ? {
+                          background: 'oklch(0.78 0.16 170 / 15%)',
+                          color: 'oklch(0.88 0.13 170)',
+                          border: '1px solid oklch(0.78 0.16 170 / 30%)',
                         } : {
                           background: 'oklch(0.20 0.015 260 / 50%)',
                           color: 'oklch(0.60 0.01 260)',
                           border: '1px solid oklch(0.35 0.015 260 / 20%)',
                         }}
                       >
-                        {dev.icon} {dev.name}
+                        {group.icon} {group.name}
                       </button>
                     ))}
                   </div>
-                  <p className="text-[11px] sm:text-xs mt-1.5" style={{ color: 'oklch(0.45 0.01 260)' }}>
-                    لو ما اخترت جهاز، التطبيق يظهر لكل الأجهزة
+                  <p className="text-[11px] sm:text-xs mt-1.5" style={{ color: 'oklch(0.50 0.02 200)' }}>
+                    يمكنك أيضاً إدارة المجموعات من الإعدادات &gt; فرز حسب
                   </p>
                 </div>
               )}

@@ -13,17 +13,30 @@ export interface AppItem {
   developer: string;
   category: string;
   priority: Priority;
-  devices: string[];
+  devices: string[]; // kept for backward compat, now maps to smartGroups
   notes: string;
   dateAdded: string;
   dateUpdated: string;
   isChecked: boolean; // for format mode
 }
 
+/**
+ * SmartGroup replaces the old Device concept.
+ * Users can create any grouping: by device, by use-case, by preference, etc.
+ * Each group contains a list of app IDs that belong to it.
+ */
+export interface SmartGroup {
+  id: string;
+  name: string;
+  icon: string; // emoji
+  appIds: string[]; // list of app IDs in this group
+}
+
+// Keep Device as alias for backward compatibility with stored data
 export interface Device {
   id: string;
   name: string;
-  icon: string; // emoji or icon name
+  icon: string;
 }
 
 export interface Category {
@@ -34,7 +47,8 @@ export interface Category {
 
 export interface AppVaultData {
   apps: AppItem[];
-  devices: Device[];
+  devices: Device[]; // kept for backward compat in export/import
+  smartGroups?: SmartGroup[]; // new grouping system
   categories: Category[];
   version: string;
   exportDate: string;

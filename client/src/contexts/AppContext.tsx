@@ -1,13 +1,14 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import type { AppItem, Device, Category, AppVaultData, AppSource, Priority } from '@/lib/types';
+import type { AppItem, Device, SmartGroup, Category, AppVaultData, AppSource, Priority } from '@/lib/types';
 import { nanoid } from 'nanoid';
 
 interface AppContextType {
   apps: AppItem[];
-  devices: Device[];
+  devices: Device[]; // kept for backward compat
+  smartGroups: SmartGroup[];
   categories: Category[];
   activeFilter: string;
-  activeDeviceFilter: string;
+  activeDeviceFilter: string; // now maps to smartGroup filter
   activeSourceFilter: string;
   searchQuery: string;
   isFormatMode: boolean;
@@ -26,9 +27,18 @@ interface AppContextType {
   toggleAppChecked: (id: string) => void;
   resetAllChecks: () => void;
 
+  // Legacy device functions (now delegate to smartGroups)
   addDevice: (name: string, icon: string) => void;
   updateDevice: (id: string, name: string, icon: string) => void;
   deleteDevice: (id: string) => void;
+
+  // SmartGroup functions
+  addSmartGroup: (name: string, icon: string) => string;
+  updateSmartGroup: (id: string, name: string, icon: string) => void;
+  deleteSmartGroup: (id: string) => void;
+  addAppsToGroup: (groupId: string, appIds: string[]) => void;
+  removeAppFromGroup: (groupId: string, appId: string) => void;
+  setGroupApps: (groupId: string, appIds: string[]) => void;
 
   addCategory: (name: string, color: string) => void;
   updateCategory: (id: string, name: string, color: string) => void;
@@ -54,26 +64,45 @@ const DEFAULT_CATEGORIES: Category[] = [
   { id: 'other', name: 'أخرى', color: '#6B7280' },
 ];
 
-/**
- * Sanitize app icon URLs - remove developer avatar URLs that were incorrectly saved
- */
 function sanitizeIconUrl(iconUrl: string): string {
   if (!iconUrl) return '';
   const badPatterns = [
-    'avatars.githubusercontent.com',
-    'avatars0.githubusercontent.com',
-    'avatars1.githubusercontent.com',
-    'avatars2.githubusercontent.com',
-    'avatars3.githubusercontent.com',
-    'contrib.rocks',
-    'contributors-img',
+    'avatars.githubusercontent.com', 'avatars0.githubusercontent.com',
+    'avatars1.githubusercontent.com', 'avatars2.githubusercontent.com',
+    'avatars3.githubusercontent.com', 'contrib.rocks', 'contributors-img',
   ];
   const lower = iconUrl.toLowerCase();
   if (badPatterns.some(p => lower.includes(p))) return '';
   return iconUrl;
 }
 
-function loadFromStorage(): { apps: AppItem[]; devices: Device[]; categories: Category[] } {
+/**
+ * Migrate old devices data to smartGroups format
+ * Old format: devices[] + app.devices[] (device IDs on each app)
+ * New format: smartGroups[] with appIds[] on each group
+ */
+function migrateDevicesToSmartGroups(
+  devices: Device[],
+  apps: AppItem[],
+  existingGroups?: SmartGroup[]
+): SmartGroup[] {
+  if (existingGroups && existingGroups.length > 0) return existingGroups;
+  if (!devices || devices.length === 0) return [];
+
+  return devices.map(dev => ({
+    id: dev.id,
+    name: dev.name,
+    icon: dev.icon,
+    appIds: apps.filter(app => app.devices.includes(dev.id)).map(app => app.id),
+  }));
+}
+
+function loadFromStorage(): {
+  apps: AppItem[];
+  devices: Device[];
+  smartGroups: SmartGroup[];
+  categories: Category[];
+} {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -82,21 +111,24 @@ function loadFromStorage(): { apps: AppItem[]; devices: Device[]; categories: Ca
         ...app,
         iconUrl: sanitizeIconUrl(app.iconUrl),
       }));
+      const devices = data.devices || [];
+      const smartGroups = migrateDevicesToSmartGroups(devices, apps, data.smartGroups);
       return {
         apps,
-        devices: data.devices || [],
+        devices,
+        smartGroups,
         categories: data.categories?.length ? data.categories : DEFAULT_CATEGORIES,
       };
     }
   } catch (e) {
     console.error('Failed to load from storage:', e);
   }
-  return { apps: [], devices: [], categories: DEFAULT_CATEGORIES };
+  return { apps: [], devices: [], smartGroups: [], categories: DEFAULT_CATEGORIES };
 }
 
-function saveToStorage(apps: AppItem[], devices: Device[], categories: Category[]) {
+function saveToStorage(apps: AppItem[], devices: Device[], smartGroups: SmartGroup[], categories: Category[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ apps, devices, categories }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ apps, devices, smartGroups, categories }));
   } catch (e) {
     console.error('Failed to save to storage:', e);
   }
@@ -105,6 +137,7 @@ function saveToStorage(apps: AppItem[], devices: Device[], categories: Category[
 export function AppProvider({ children }: { children: ReactNode }) {
   const [apps, setApps] = useState<AppItem[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [smartGroups, setSmartGroups] = useState<SmartGroup[]>([]);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeDeviceFilter, setActiveDeviceFilter] = useState('all');
@@ -118,15 +151,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const data = loadFromStorage();
     setApps(data.apps);
     setDevices(data.devices);
+    setSmartGroups(data.smartGroups);
     setCategories(data.categories);
     setIsLoaded(true);
   }, []);
 
   useEffect(() => {
     if (isLoaded) {
-      saveToStorage(apps, devices, categories);
+      saveToStorage(apps, devices, smartGroups, categories);
     }
-  }, [apps, devices, categories, isLoaded]);
+  }, [apps, devices, smartGroups, categories, isLoaded]);
 
   const addApp = useCallback((app: Omit<AppItem, 'id' | 'dateAdded' | 'dateUpdated' | 'isChecked'>) => {
     const now = new Date().toISOString();
@@ -148,6 +182,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteApp = useCallback((id: string) => {
     setApps(prev => prev.filter(app => app.id !== id));
+    // Also remove from all smartGroups
+    setSmartGroups(prev => prev.map(g => ({
+      ...g,
+      appIds: g.appIds.filter(aid => aid !== id),
+    })));
   }, []);
 
   const toggleAppChecked = useCallback((id: string) => {
@@ -160,20 +199,93 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setApps(prev => prev.map(app => ({ ...app, isChecked: false })));
   }, []);
 
+  // Legacy device functions - now create smartGroups
   const addDevice = useCallback((name: string, icon: string) => {
-    setDevices(prev => [...prev, { id: nanoid(), name, icon }]);
+    const id = nanoid();
+    setDevices(prev => [...prev, { id, name, icon }]);
+    setSmartGroups(prev => [...prev, { id, name, icon, appIds: [] }]);
   }, []);
 
   const updateDevice = useCallback((id: string, name: string, icon: string) => {
     setDevices(prev => prev.map(d => d.id === id ? { ...d, name, icon } : d));
+    setSmartGroups(prev => prev.map(g => g.id === id ? { ...g, name, icon } : g));
   }, []);
 
   const deleteDevice = useCallback((id: string) => {
+    setDevices(prev => prev.filter(d => d.id !== id));
+    setSmartGroups(prev => prev.filter(g => g.id !== id));
+    setApps(prev => prev.map(app => ({
+      ...app,
+      devices: app.devices.filter(did => did !== id),
+    })));
+  }, []);
+
+  // SmartGroup functions
+  const addSmartGroup = useCallback((name: string, icon: string): string => {
+    const id = nanoid();
+    setSmartGroups(prev => [...prev, { id, name, icon, appIds: [] }]);
+    // Also add to legacy devices for backward compat
+    setDevices(prev => [...prev, { id, name, icon }]);
+    return id;
+  }, []);
+
+  const updateSmartGroup = useCallback((id: string, name: string, icon: string) => {
+    setSmartGroups(prev => prev.map(g => g.id === id ? { ...g, name, icon } : g));
+    setDevices(prev => prev.map(d => d.id === id ? { ...d, name, icon } : d));
+  }, []);
+
+  const deleteSmartGroup = useCallback((id: string) => {
+    setSmartGroups(prev => prev.filter(g => g.id !== id));
     setDevices(prev => prev.filter(d => d.id !== id));
     setApps(prev => prev.map(app => ({
       ...app,
       devices: app.devices.filter(did => did !== id),
     })));
+  }, []);
+
+  const addAppsToGroup = useCallback((groupId: string, appIds: string[]) => {
+    setSmartGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g;
+      const newIds = Array.from(new Set([...g.appIds, ...appIds]));
+      return { ...g, appIds: newIds };
+    }));
+    // Also update legacy app.devices
+    setApps(prev => prev.map(app => {
+      if (!appIds.includes(app.id)) return app;
+      const newDevices = Array.from(new Set([...app.devices, groupId]));
+      return { ...app, devices: newDevices };
+    }));
+  }, []);
+
+  const removeAppFromGroup = useCallback((groupId: string, appId: string) => {
+    setSmartGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g;
+      return { ...g, appIds: g.appIds.filter(id => id !== appId) };
+    }));
+    // Also update legacy app.devices
+    setApps(prev => prev.map(app => {
+      if (app.id !== appId) return app;
+      return { ...app, devices: app.devices.filter(d => d !== groupId) };
+    }));
+  }, []);
+
+  const setGroupApps = useCallback((groupId: string, appIds: string[]) => {
+    setSmartGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g;
+      return { ...g, appIds };
+    }));
+    // Sync legacy app.devices
+    setApps(prev => prev.map(app => {
+      const shouldBeInGroup = appIds.includes(app.id);
+      const isInGroup = app.devices.includes(groupId);
+      if (shouldBeInGroup && !isInGroup) {
+        return { ...app, devices: [...app.devices, groupId] };
+      }
+      if (!shouldBeInGroup && isInGroup) {
+        return { ...app, devices: app.devices.filter(d => d !== groupId) };
+      }
+      return app;
+    }));
   }, []);
 
   const addCategory = useCallback((name: string, color: string) => {
@@ -195,24 +307,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const data: AppVaultData = {
       apps,
       devices,
+      smartGroups,
       categories,
-      version: '1.0.0',
+      version: '1.1.0',
       exportDate: new Date().toISOString(),
     };
     return JSON.stringify(data, null, 2);
-  }, [apps, devices, categories]);
+  }, [apps, devices, smartGroups, categories]);
 
   const importData = useCallback((jsonString: string): boolean => {
     try {
       const data: AppVaultData = JSON.parse(jsonString);
       if (data.apps && Array.isArray(data.apps)) {
-        // Sanitize icon URLs on import to clean stale avatar URLs
         const cleanedApps = data.apps.map((app: AppItem) => ({
           ...app,
           iconUrl: sanitizeIconUrl(app.iconUrl),
         }));
         setApps(cleanedApps);
         if (data.devices) setDevices(data.devices);
+        // Migrate or use smartGroups
+        const groups = migrateDevicesToSmartGroups(
+          data.devices || [],
+          cleanedApps,
+          data.smartGroups
+        );
+        setSmartGroups(groups);
         if (data.categories?.length) setCategories(data.categories);
         return true;
       }
@@ -238,10 +357,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       filtered = filtered.filter(app => app.category === activeFilter);
     }
 
+    // SmartGroup filter (replaces old device filter)
     if (activeDeviceFilter !== 'all') {
-      filtered = filtered.filter(app =>
-        app.devices.length === 0 || app.devices.includes(activeDeviceFilter)
-      );
+      const group = smartGroups.find(g => g.id === activeDeviceFilter);
+      if (group) {
+        filtered = filtered.filter(app => group.appIds.includes(app.id));
+      }
     }
 
     if (activeSourceFilter !== 'all') {
@@ -249,9 +370,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     if (isFormatMode && formatDeviceId !== 'all') {
-      filtered = filtered.filter(app =>
-        app.devices.length === 0 || app.devices.includes(formatDeviceId)
-      );
+      const group = smartGroups.find(g => g.id === formatDeviceId);
+      if (group) {
+        filtered = filtered.filter(app => group.appIds.includes(app.id));
+      }
     }
 
     // Sort by priority then name
@@ -264,17 +386,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     return filtered;
-  }, [apps, searchQuery, activeFilter, activeDeviceFilter, activeSourceFilter, isFormatMode, formatDeviceId]);
+  }, [apps, searchQuery, activeFilter, activeDeviceFilter, activeSourceFilter, isFormatMode, formatDeviceId, smartGroups]);
 
   return (
     <AppContext.Provider value={{
-      apps, devices, categories,
+      apps, devices, smartGroups, categories,
       activeFilter, activeDeviceFilter, activeSourceFilter,
       searchQuery, isFormatMode, formatDeviceId,
       setActiveFilter, setActiveDeviceFilter, setActiveSourceFilter,
       setSearchQuery, setIsFormatMode, setFormatDeviceId,
       addApp, updateApp, deleteApp, toggleAppChecked, resetAllChecks,
       addDevice, updateDevice, deleteDevice,
+      addSmartGroup, updateSmartGroup, deleteSmartGroup,
+      addAppsToGroup, removeAppFromGroup, setGroupApps,
       addCategory, updateCategory, deleteCategory,
       exportData, importData, getFilteredApps,
     }}>
