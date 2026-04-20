@@ -1,7 +1,6 @@
 /*
- * Design: Glass Vault / Frosted Modern
- * Import/Export dialog
- * MOBILE-FIRST: compact spacing on phones
+ * LIGHT MODE - Vibrant Import/Export dialog
+ * White bg, green export, amber import, clear buttons
  */
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAppContext } from '@/contexts/AppContext';
@@ -62,13 +61,9 @@ export default function ImportExportDialog({ open, onOpenChange, mode }: ImportE
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm max-h-[85vh] max-h-[85dvh] overflow-y-auto" style={{
-        background: 'oklch(0.16 0.02 260)',
-        border: '1px solid oklch(0.35 0.015 260 / 30%)',
-      }}>
+      <DialogContent className="max-w-sm max-h-[85vh] max-h-[85dvh] overflow-y-auto bg-white border border-gray-200 shadow-xl">
         <DialogHeader>
-          <DialogTitle className="text-base sm:text-lg font-bold" style={{
-            color: 'oklch(0.95 0.005 260)',
+          <DialogTitle className="text-base sm:text-lg font-bold text-gray-900" style={{
             fontFamily: "'Space Grotesk', 'IBM Plex Sans Arabic', sans-serif",
           }}>
             {mode === 'export' ? 'تصدير البيانات' : 'استيراد البيانات'}
@@ -76,26 +71,23 @@ export default function ImportExportDialog({ open, onOpenChange, mode }: ImportE
         </DialogHeader>
 
         {mode === 'export' ? (
-          <div className="space-y-3 sm:space-y-4 mt-1 sm:mt-2">
-            <div className="p-4 sm:p-5 rounded-xl text-center" style={{
-              background: 'oklch(0.20 0.015 260 / 50%)',
-              border: '1px solid oklch(0.30 0.015 260 / 20%)',
-            }}>
-              <FileJson size={40} className="mx-auto mb-2.5 sm:mb-3 sm:!w-12 sm:!h-12" style={{ color: 'oklch(0.75 0.15 180)' }} />
-              <p className="text-sm sm:text-base font-medium" style={{ color: 'oklch(0.85 0.005 260)' }}>
+          <div className="space-y-3 sm:space-y-4 mt-2">
+            <div className="p-5 rounded-xl text-center bg-green-50 border-2 border-green-200">
+              <FileJson size={44} className="mx-auto mb-3 text-green-500" />
+              <p className="text-sm sm:text-base font-bold text-gray-800">
                 {apps.length} تطبيق جاهز للتصدير
               </p>
-              <p className="text-xs sm:text-sm mt-1 sm:mt-1.5 leading-relaxed" style={{ color: 'oklch(0.50 0.01 260)' }}>
+              <p className="text-xs sm:text-sm mt-1.5 text-gray-500 leading-relaxed">
                 احفظ الملف في Google Drive أو أي كلاود عشان يكون متاح بعد الفورمات
               </p>
             </div>
 
             <button
               onClick={handleExport}
-              className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-semibold transition-all active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-bold text-white transition-all active:scale-[0.98] shadow-lg"
               style={{
-                background: 'linear-gradient(135deg, oklch(0.75 0.15 180), oklch(0.60 0.15 180))',
-                color: 'oklch(0.15 0.015 260)',
+                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                boxShadow: '0 4px 15px rgba(34,197,94,0.3)',
               }}
             >
               <Download size={18} />
@@ -104,27 +96,20 @@ export default function ImportExportDialog({ open, onOpenChange, mode }: ImportE
 
             <button
               onClick={handleCopyToClipboard}
-              className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-medium transition-all hover:bg-white/5 active:bg-white/10"
-              style={{
-                color: 'oklch(0.70 0.01 260)',
-                border: '1px solid oklch(0.35 0.015 260 / 30%)',
-              }}
+              className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-semibold text-gray-600 border-2 border-gray-200 bg-white hover:bg-gray-50 transition-all"
             >
-              {copied ? <Check size={18} /> : <Copy size={18} />}
+              {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
               {copied ? 'تم النسخ' : 'نسخ للحافظة'}
             </button>
           </div>
         ) : (
-          <div className="space-y-3 sm:space-y-4 mt-1 sm:mt-2">
-            <div className="p-4 sm:p-5 rounded-xl text-center" style={{
-              background: 'oklch(0.20 0.015 260 / 50%)',
-              border: '1px solid oklch(0.30 0.015 260 / 20%)',
-            }}>
-              <Upload size={40} className="mx-auto mb-2.5 sm:mb-3 sm:!w-12 sm:!h-12" style={{ color: 'oklch(0.78 0.15 80)' }} />
-              <p className="text-sm sm:text-base font-medium" style={{ color: 'oklch(0.85 0.005 260)' }}>
+          <div className="space-y-3 sm:space-y-4 mt-2">
+            <div className="p-5 rounded-xl text-center bg-amber-50 border-2 border-amber-200">
+              <Upload size={44} className="mx-auto mb-3 text-amber-500" />
+              <p className="text-sm sm:text-base font-bold text-gray-800">
                 استورد بياناتك
               </p>
-              <p className="text-xs sm:text-sm mt-1 sm:mt-1.5 leading-relaxed" style={{ color: 'oklch(0.50 0.01 260)' }}>
+              <p className="text-xs sm:text-sm mt-1.5 text-gray-500 leading-relaxed">
                 اختر ملف JSON اللي صدرته سابقاً. البيانات الحالية بتنحذف وتتبدل بالبيانات المستوردة.
               </p>
             </div>
@@ -139,10 +124,10 @@ export default function ImportExportDialog({ open, onOpenChange, mode }: ImportE
 
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-semibold transition-all active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-bold text-white transition-all active:scale-[0.98] shadow-lg"
               style={{
-                background: 'linear-gradient(135deg, oklch(0.78 0.15 80), oklch(0.70 0.18 60))',
-                color: 'oklch(0.15 0.015 260)',
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                boxShadow: '0 4px 15px rgba(245,158,11,0.3)',
               }}
             >
               <Upload size={18} />

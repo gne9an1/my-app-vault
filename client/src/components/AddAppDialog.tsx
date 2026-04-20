@@ -1,8 +1,7 @@
 /*
- * Design: Glass Vault / Frosted Modern
- * Add/Edit app dialog with smart URL detection and auto-fetch
- * MOBILE-FIRST: compact inputs on phones, comfortable on desktop
- * Dialog uses max-h-[85dvh] for better mobile viewport handling
+ * LIGHT MODE - Vibrant colorful Add/Edit dialog
+ * White background, clear borders, orange primary, colorful accents
+ * All inputs have clear visible borders and labels
  */
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAppContext } from '@/contexts/AppContext';
@@ -132,58 +131,48 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
     );
   }
 
-  const inputStyle = {
-    background: 'oklch(0.20 0.02 260 / 85%)',
-    border: '1px solid oklch(0.45 0.03 260 / 45%)',
-    color: 'oklch(0.95 0.005 260)',
-  };
-
-  const labelStyle = { color: 'oklch(0.72 0.02 200)' };
+  // Light mode input styles - clear and visible
+  const inputCls = "w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-sm outline-none bg-white border-2 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all";
+  const selectCls = "w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-sm outline-none bg-white border-2 border-gray-200 text-gray-900 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] max-h-[85dvh] overflow-y-auto" style={{
-        background: 'oklch(0.16 0.02 260)',
-        border: '1px solid oklch(0.35 0.015 260 / 30%)',
-        backdropFilter: 'blur(24px)',
-      }}>
+      <DialogContent className="max-w-lg max-h-[85vh] max-h-[85dvh] overflow-y-auto bg-white border border-gray-200 shadow-xl">
         <DialogHeader>
-          <DialogTitle className="text-base sm:text-lg font-bold" style={{
-            color: 'oklch(0.95 0.005 260)',
+          <DialogTitle className="text-base sm:text-lg font-bold text-gray-900" style={{
             fontFamily: "'Space Grotesk', 'IBM Plex Sans Arabic', sans-serif",
           }}>
             {editApp ? 'تعديل التطبيق' : 'إضافة تطبيق جديد'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3 sm:space-y-4 mt-1 sm:mt-2">
-          {/* URL Input with Fetch */}
+        <div className="space-y-3.5 sm:space-y-4 mt-2">
+          {/* URL Input */}
           {!editApp && (
             <div>
-              <label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block" style={labelStyle}>
+              <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">
                 رابط التطبيق (GitHub / Google Play / F-Droid)
               </label>
               <div className="flex gap-2">
-                <div className="glow-input flex-1 flex items-center gap-2 rounded-xl px-3 py-2.5 sm:py-3">
-                  <Link2 size={16} className="shrink-0" style={{ color: 'oklch(0.50 0.01 260)' }} />
+                <div className="flex-1 flex items-center gap-2 bg-white border-2 border-gray-200 rounded-xl px-3.5 py-2.5 sm:py-3 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+                  <Link2 size={16} className="shrink-0 text-gray-400" />
                   <input
                     type="url"
                     placeholder="الصق الرابط هنا..."
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleFetch()}
-                    className="bg-transparent border-none outline-none w-full text-sm"
-                    style={{ color: 'oklch(0.90 0.005 260)' }}
+                    className="bg-transparent border-none outline-none w-full text-sm text-gray-900 placeholder-gray-400"
                     dir="ltr"
                   />
                 </div>
                 <button
                   onClick={handleFetch}
                   disabled={isFetching || !url.trim()}
-                  className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all disabled:opacity-40 shrink-0"
+                  className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-white transition-all disabled:opacity-40 shrink-0 shadow-md"
                   style={{
-                    background: 'linear-gradient(135deg, oklch(0.75 0.15 180), oklch(0.60 0.15 180))',
-                    color: 'oklch(0.15 0.015 260)',
+                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                    boxShadow: '0 2px 10px rgba(34,197,94,0.25)',
                   }}
                 >
                   {isFetching ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
@@ -191,133 +180,82 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
                 </button>
               </div>
               {fetchError && (
-                <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm" style={{ color: 'oklch(0.70 0.18 40)' }}>
+                <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-red-500">
                   <AlertCircle size={14} />
                   {fetchError} - يمكنك الإضافة يدوياً
                 </div>
               )}
               <button
                 onClick={() => { setIsManualMode(true); setSource('manual'); }}
-                className="text-xs sm:text-sm mt-2 transition-all hover:underline"
-                style={{ color: 'oklch(0.60 0.12 180)' }}
+                className="text-xs sm:text-sm mt-2 text-blue-600 font-medium hover:underline transition-all"
               >
                 أو أضف يدوياً بدون رابط
               </button>
             </div>
           )}
 
-          {/* Manual/Fetched Form */}
+          {/* Form */}
           {(isManualMode || editApp) && (
             <>
-              {/* App Icon Preview + Name */}
+              {/* Icon + Name */}
               <div className="flex gap-3 items-start">
                 <div className="shrink-0">
                   {iconUrl ? (
-                    <img src={iconUrl} alt="" className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl object-cover"
-                      style={{ border: '1px solid oklch(0.35 0.015 260 / 30%)' }}
+                    <img src={iconUrl} alt="" className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border-2 border-gray-100 shadow-sm"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                   ) : (
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-xl sm:text-2xl font-bold"
-                      style={{
-                        background: 'oklch(0.22 0.02 260)',
-                        border: '1px solid oklch(0.35 0.015 260 / 30%)',
-                        color: 'oklch(0.75 0.15 180)',
-                        fontFamily: "'Space Grotesk', sans-serif",
-                      }}>
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-xl sm:text-2xl font-bold bg-orange-50 border-2 border-orange-200 text-orange-600"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                       {name ? name.charAt(0).toUpperCase() : '?'}
                     </div>
                   )}
                 </div>
-                <div className="flex-1 space-y-2.5 sm:space-y-3">
+                <div className="flex-1 space-y-3">
                   <div>
-                    <label className="text-xs sm:text-sm font-medium mb-1 sm:mb-1.5 block" style={labelStyle}>اسم التطبيق *</label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl text-sm sm:text-base outline-none focus:ring-1 focus:ring-teal/30"
-                      style={inputStyle}
-                      placeholder="مثال: Magisk"
-                    />
+                    <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">اسم التطبيق *</label>
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                      className={inputCls} placeholder="مثال: Magisk" />
                   </div>
                   <div>
-                    <label className="text-xs sm:text-sm font-medium mb-1 sm:mb-1.5 block" style={labelStyle}>رابط الأيقونة</label>
-                    <input
-                      type="url"
-                      value={iconUrl}
-                      onChange={(e) => setIconUrl(e.target.value)}
-                      className="w-full px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl text-xs sm:text-sm outline-none focus:ring-1 focus:ring-teal/30"
-                      style={inputStyle}
-                      placeholder="https://..."
-                      dir="ltr"
-                    />
+                    <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">رابط الأيقونة</label>
+                    <input type="url" value={iconUrl} onChange={(e) => setIconUrl(e.target.value)}
+                      className={inputCls + " text-xs"} placeholder="https://..." dir="ltr" />
                   </div>
                 </div>
               </div>
 
               {/* Description */}
               <div>
-                <label className="text-xs sm:text-sm font-medium mb-1 sm:mb-1.5 block" style={labelStyle}>الوصف</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl text-sm outline-none resize-none focus:ring-1 focus:ring-teal/30"
-                  style={inputStyle}
-                  rows={2}
-                  placeholder="وصف مختصر للتطبيق..."
-                />
+                <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">الوصف</label>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)}
+                  className={inputCls + " resize-none"} rows={2} placeholder="وصف مختصر للتطبيق..." />
               </div>
 
-              {/* Download Page URL */}
+              {/* Download URL */}
               <div>
-                <label className="text-xs sm:text-sm font-medium mb-1 sm:mb-1.5 block" style={labelStyle}>رابط صفحة التحميل</label>
-                <input
-                  type="url"
-                  value={downloadPageUrl}
-                  onChange={(e) => setDownloadPageUrl(e.target.value)}
-                  className="w-full px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl text-xs sm:text-sm outline-none focus:ring-1 focus:ring-teal/30"
-                  style={inputStyle}
-                  placeholder="https://..."
-                  dir="ltr"
-                />
+                <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">رابط صفحة التحميل</label>
+                <input type="url" value={downloadPageUrl} onChange={(e) => setDownloadPageUrl(e.target.value)}
+                  className={inputCls + " text-xs"} placeholder="https://..." dir="ltr" />
               </div>
 
               {/* Developer */}
               <div>
-                <label className="text-xs sm:text-sm font-medium mb-1 sm:mb-1.5 block" style={labelStyle}>المطور</label>
-                <input
-                  type="text"
-                  value={developer}
-                  onChange={(e) => setDeveloper(e.target.value)}
-                  className="w-full px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl text-sm outline-none focus:ring-1 focus:ring-teal/30"
-                  style={inputStyle}
-                  placeholder="اسم المطور"
-                />
+                <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">المطور</label>
+                <input type="text" value={developer} onChange={(e) => setDeveloper(e.target.value)}
+                  className={inputCls} placeholder="اسم المطور" />
               </div>
 
-              {/* Version + Source Row */}
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              {/* Version + Source */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs sm:text-sm font-medium mb-1 sm:mb-1.5 block" style={labelStyle}>الإصدار</label>
-                  <input
-                    type="text"
-                    value={version}
-                    onChange={(e) => setVersion(e.target.value)}
-                    className="w-full px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl text-sm outline-none focus:ring-1 focus:ring-teal/30"
-                    style={inputStyle}
-                    placeholder="1.0.0"
-                    dir="ltr"
-                  />
+                  <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">الإصدار</label>
+                  <input type="text" value={version} onChange={(e) => setVersion(e.target.value)}
+                    className={inputCls} placeholder="1.0.0" dir="ltr" />
                 </div>
                 <div>
-                  <label className="text-xs sm:text-sm font-medium mb-1 sm:mb-1.5 block" style={labelStyle}>المصدر</label>
-                  <select
-                    value={source}
-                    onChange={(e) => setSource(e.target.value as AppSource)}
-                    className="w-full px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl text-sm outline-none"
-                    style={inputStyle}
-                  >
+                  <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">المصدر</label>
+                  <select value={source} onChange={(e) => setSource(e.target.value as AppSource)} className={selectCls}>
                     <option value="github">GitHub</option>
                     <option value="playstore">Google Play</option>
                     <option value="fdroid">F-Droid</option>
@@ -326,29 +264,19 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
                 </div>
               </div>
 
-              {/* Category + Priority Row */}
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              {/* Category + Priority */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs sm:text-sm font-medium mb-1 sm:mb-1.5 block" style={labelStyle}>التصنيف</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl text-sm outline-none"
-                    style={inputStyle}
-                  >
+                  <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">التصنيف</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectCls}>
                     {categories.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs sm:text-sm font-medium mb-1 sm:mb-1.5 block" style={labelStyle}>الأولوية</label>
-                  <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value as Priority)}
-                    className="w-full px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl text-sm outline-none"
-                    style={inputStyle}
-                  >
+                  <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">الأولوية</label>
+                  <select value={priority} onChange={(e) => setPriority(e.target.value as Priority)} className={selectCls}>
                     <option value="high">عالية</option>
                     <option value="medium">متوسطة</option>
                     <option value="low">منخفضة</option>
@@ -356,31 +284,26 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
                 </div>
               </div>
 
-              {/* Smart Groups - فرز حسب */}
+              {/* Smart Groups */}
               {smartGroups.length > 0 && (
                 <div>
-                  <label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block" style={labelStyle}>فرز حسب (اختياري)</label>
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">فرز حسب (اختياري)</label>
+                  <div className="flex flex-wrap gap-2">
                     {smartGroups.map(group => (
                       <button
                         key={group.id}
                         onClick={() => toggleDevice(group.id)}
-                        className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm transition-all"
-                        style={selectedDevices.includes(group.id) ? {
-                          background: 'oklch(0.78 0.16 170 / 15%)',
-                          color: 'oklch(0.88 0.13 170)',
-                          border: '1px solid oklch(0.78 0.16 170 / 30%)',
-                        } : {
-                          background: 'oklch(0.20 0.015 260 / 50%)',
-                          color: 'oklch(0.60 0.01 260)',
-                          border: '1px solid oklch(0.35 0.015 260 / 20%)',
-                        }}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all ${
+                          selectedDevices.includes(group.id)
+                            ? 'bg-violet-50 text-violet-700 border-2 border-violet-300 shadow-sm'
+                            : 'bg-gray-50 text-gray-500 border-2 border-gray-200 hover:border-gray-300'
+                        }`}
                       >
                         {group.icon} {group.name}
                       </button>
                     ))}
                   </div>
-                  <p className="text-[11px] sm:text-xs mt-1.5" style={{ color: 'oklch(0.50 0.02 200)' }}>
+                  <p className="text-[11px] sm:text-xs mt-1.5 text-gray-400">
                     يمكنك أيضاً إدارة المجموعات من الإعدادات &gt; فرز حسب
                   </p>
                 </div>
@@ -388,25 +311,19 @@ export default function AddAppDialog({ open, onOpenChange, editApp }: AddAppDial
 
               {/* Notes */}
               <div>
-                <label className="text-xs sm:text-sm font-medium mb-1 sm:mb-1.5 block" style={labelStyle}>ملاحظات شخصية</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2.5 sm:px-3.5 sm:py-3 rounded-xl text-sm outline-none resize-none focus:ring-1 focus:ring-teal/30"
-                  style={inputStyle}
-                  rows={2}
-                  placeholder="مثال: لازم أفعل إعداد معين بعد التثبيت..."
-                />
+                <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 block">ملاحظات شخصية</label>
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+                  className={inputCls + " resize-none"} rows={2}
+                  placeholder="مثال: لازم أفعل إعداد معين بعد التثبيت..." />
               </div>
 
-              {/* Submit Button */}
+              {/* Submit */}
               <button
                 onClick={handleSubmit}
-                className="w-full py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-semibold transition-all active:scale-[0.98]"
+                className="w-full py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-bold text-white transition-all active:scale-[0.98] shadow-lg hover:shadow-xl"
                 style={{
-                  background: 'linear-gradient(135deg, oklch(0.75 0.15 180), oklch(0.60 0.15 180))',
-                  color: 'oklch(0.15 0.015 260)',
-                  boxShadow: '0 0 20px oklch(0.75 0.15 180 / 20%)',
+                  background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                  boxShadow: '0 4px 15px rgba(249,115,22,0.3)',
                 }}
               >
                 {editApp ? 'حفظ التعديلات' : 'إضافة التطبيق'}

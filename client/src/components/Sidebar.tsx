@@ -1,8 +1,7 @@
 /*
- * Design: Glass Vault / Frosted Modern - Vibrant refresh
- * Sidebar with glass morphism, vibrant teal accents
- * "فرز حسب" replaces old device filter - shows ONLY selected apps
- * MOBILE-FIRST: large touch targets inside Sheet on mobile
+ * LIGHT MODE - Vibrant colorful sidebar
+ * Clear contrast, colorful category dots, orange/green/blue accents
+ * "فرز حسب" smart group filter - shows ONLY selected apps
  */
 import { useAppContext } from '@/contexts/AppContext';
 import { Layers, Github, Play, Box, Tag, ChevronDown, ChevronUp, Filter } from 'lucide-react';
@@ -47,10 +46,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   if (isMobile) {
     return (
       <div className="p-4 space-y-4">
-        <h2 className="text-base font-bold mb-3" style={{
-          color: 'oklch(0.90 0.005 260)',
-          fontFamily: "'Space Grotesk', 'IBM Plex Sans Arabic', sans-serif",
-        }}>
+        <h2 className="text-base font-bold text-gray-900 mb-3" style={{ fontFamily: "'Space Grotesk', 'IBM Plex Sans Arabic', sans-serif" }}>
           الفلاتر
         </h2>
         {renderContent()}
@@ -73,27 +69,15 @@ export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
       ? "flex items-center justify-between w-full px-3.5 py-3 rounded-xl text-sm transition-all"
       : "flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm transition-all";
 
-    const activeStyle = {
-      background: 'oklch(0.78 0.16 170 / 12%)',
-      color: 'oklch(0.88 0.13 170)',
-      border: '1px solid oklch(0.78 0.16 170 / 20%)',
-    };
-
-    const inactiveStyle = {
-      color: 'oklch(0.72 0.01 260)',
-      border: '1px solid transparent',
-    };
-
     return (
       <>
-        {/* فرز حسب - SmartGroups Filter */}
+        {/* فرز حسب - SmartGroups */}
         {smartGroups.length > 0 && (
           <>
             <div>
               <button
                 onClick={() => setShowGroups(!showGroups)}
-                className="flex items-center justify-between w-full mb-2 text-xs font-semibold uppercase tracking-wider"
-                style={{ color: 'oklch(0.60 0.04 170)' }}
+                className="flex items-center justify-between w-full mb-2 text-xs font-bold uppercase tracking-wider text-orange-600"
               >
                 <span className="flex items-center gap-1.5">
                   <Filter size={12} />
@@ -107,47 +91,50 @@ export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="space-y-0.5 sm:space-y-1 overflow-hidden"
+                    className="space-y-1 overflow-hidden"
                   >
                     <button
                       onClick={() => handleFilterClick(() => setActiveDeviceFilter('all'))}
-                      className={`${itemClass} ${activeDeviceFilter === 'all' ? '' : 'hover:bg-white/5 active:bg-white/10'}`}
-                      style={activeDeviceFilter === 'all' ? activeStyle : inactiveStyle}
+                      className={`${itemClass} ${activeDeviceFilter === 'all'
+                        ? 'bg-orange-50 text-orange-700 border border-orange-200 font-semibold'
+                        : 'text-gray-600 border border-transparent hover:bg-gray-50'
+                      }`}
                     >
                       <span className="flex items-center gap-2">
                         <Layers size={15} />
                         الكل
                       </span>
-                      <span className="text-xs opacity-60">{apps.length}</span>
+                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{apps.length}</span>
                     </button>
                     {smartGroups.map(group => (
                       <button
                         key={group.id}
                         onClick={() => handleFilterClick(() => setActiveDeviceFilter(group.id))}
-                        className={`${itemClass} ${activeDeviceFilter === group.id ? '' : 'hover:bg-white/5 active:bg-white/10'}`}
-                        style={activeDeviceFilter === group.id ? activeStyle : inactiveStyle}
+                        className={`${itemClass} ${activeDeviceFilter === group.id
+                          ? 'bg-orange-50 text-orange-700 border border-orange-200 font-semibold'
+                          : 'text-gray-600 border border-transparent hover:bg-gray-50'
+                        }`}
                       >
                         <span className="flex items-center gap-2">
                           <span className="text-base">{group.icon}</span>
                           {group.name}
                         </span>
-                        <span className="text-xs opacity-60">{group.appIds.length}</span>
+                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{group.appIds.length}</span>
                       </button>
                     ))}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-            <div style={{ height: '1px', background: 'oklch(0.35 0.015 260 / 25%)' }} />
+            <div className="h-px bg-gray-200" />
           </>
         )}
 
-        {/* Sources Filter */}
+        {/* Sources */}
         <div>
           <button
             onClick={() => setShowSources(!showSources)}
-            className="flex items-center justify-between w-full mb-2 text-xs font-semibold uppercase tracking-wider"
-            style={{ color: 'oklch(0.55 0.01 260)' }}
+            className="flex items-center justify-between w-full mb-2 text-xs font-bold uppercase tracking-wider text-blue-600"
           >
             <span>المصدر</span>
             {showSources ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -158,20 +145,22 @@ export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="space-y-0.5 sm:space-y-1 overflow-hidden"
+                className="space-y-1 overflow-hidden"
               >
                 {sourceOptions.map(src => (
                   <button
                     key={src.id}
                     onClick={() => handleFilterClick(() => setActiveSourceFilter(src.id))}
-                    className={`${itemClass} ${activeSourceFilter === src.id ? '' : 'hover:bg-white/5 active:bg-white/10'}`}
-                    style={activeSourceFilter === src.id ? activeStyle : inactiveStyle}
+                    className={`${itemClass} ${activeSourceFilter === src.id
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold'
+                      : 'text-gray-600 border border-transparent hover:bg-gray-50'
+                    }`}
                   >
                     <span className="flex items-center gap-2">
                       {src.icon}
                       {src.name}
                     </span>
-                    <span className="text-xs opacity-60">{src.count}</span>
+                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">{src.count}</span>
                   </button>
                 ))}
               </motion.div>
@@ -179,14 +168,13 @@ export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
           </AnimatePresence>
         </div>
 
-        <div style={{ height: '1px', background: 'oklch(0.35 0.015 260 / 25%)' }} />
+        <div className="h-px bg-gray-200" />
 
-        {/* Categories Filter */}
+        {/* Categories */}
         <div>
           <button
             onClick={() => setShowCategories(!showCategories)}
-            className="flex items-center justify-between w-full mb-2 text-xs font-semibold uppercase tracking-wider"
-            style={{ color: 'oklch(0.55 0.01 260)' }}
+            className="flex items-center justify-between w-full mb-2 text-xs font-bold uppercase tracking-wider text-green-600"
           >
             <span>التصنيفات</span>
             {showCategories ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -197,35 +185,40 @@ export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="space-y-0.5 sm:space-y-1 overflow-hidden"
+                className="space-y-1 overflow-hidden"
               >
                 <button
                   onClick={() => handleFilterClick(() => setActiveFilter('all'))}
-                  className={`${itemClass} ${activeFilter === 'all' ? '' : 'hover:bg-white/5 active:bg-white/10'}`}
-                  style={activeFilter === 'all' ? activeStyle : inactiveStyle}
+                  className={`${itemClass} ${activeFilter === 'all'
+                    ? 'bg-green-50 text-green-700 border border-green-200 font-semibold'
+                    : 'text-gray-600 border border-transparent hover:bg-gray-50'
+                  }`}
                 >
                   <span className="flex items-center gap-2">
                     <Layers size={15} />
                     الكل
                   </span>
-                  <span className="text-xs opacity-60">{apps.length}</span>
+                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{apps.length}</span>
                 </button>
                 {categories.map(cat => (
                   <button
                     key={cat.id}
                     onClick={() => handleFilterClick(() => setActiveFilter(cat.id))}
-                    className={`${itemClass} ${activeFilter === cat.id ? '' : 'hover:bg-white/5 active:bg-white/10'}`}
+                    className={`${itemClass} ${activeFilter === cat.id
+                      ? 'font-semibold'
+                      : 'text-gray-600 border border-transparent hover:bg-gray-50'
+                    }`}
                     style={activeFilter === cat.id ? {
-                      background: `${cat.color}15`,
+                      background: `${cat.color}12`,
                       color: cat.color,
-                      border: `1px solid ${cat.color}30`,
-                    } : inactiveStyle}
+                      border: `1px solid ${cat.color}35`,
+                    } : undefined}
                   >
                     <span className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cat.color }} />
+                      <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ background: cat.color }} />
                       {cat.name}
                     </span>
-                    <span className="text-xs opacity-60">{getCategoryCount(cat.id)}</span>
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{getCategoryCount(cat.id)}</span>
                   </button>
                 ))}
               </motion.div>

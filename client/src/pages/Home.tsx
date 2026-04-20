@@ -1,10 +1,6 @@
 /*
- * Design: Glass Vault / Frosted Modern
- * Main page - assembles Header, Sidebar, AppCards, Dialogs
- * Dark background with teal accents, glass morphism cards
- * MOBILE-FIRST: single column on phones, sidebar on desktop
- * - Mobile: full-width cards, FAB for filters, compact spacing
- * - Desktop: sidebar + 2-3 column grid
+ * LIGHT MODE - Vibrant colorful main page
+ * Light background, orange FAB, clear layout
  */
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
@@ -43,16 +39,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen min-h-[100dvh] relative" style={{ background: 'oklch(0.13 0.015 260)' }}>
-      {/* Subtle background pattern */}
-      <div className="fixed inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: `url("https://d2xsxph8kpxj0f.cloudfront.net/310519663296462128/hPcSjJmyRTSXUtFyPw4oDE/sidebar-pattern-EAermaWhLaErufZVzodi9a.webp")`,
-          backgroundSize: '400px',
-          backgroundRepeat: 'repeat',
-        }}
-      />
-
+    <div className="min-h-screen min-h-[100dvh] relative bg-gradient-to-br from-gray-50 via-white to-orange-50/30">
       {/* Header */}
       <Header
         onAddClick={() => { setEditingApp(null); setShowAddDialog(true); }}
@@ -69,15 +56,11 @@ export default function Home() {
 
       {/* Main Layout */}
       <div className="flex relative">
-        {/* Mobile: Sheet-based sidebar (RTL: opens from left) */}
+        {/* Mobile: Sheet-based sidebar */}
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent
             side="left"
-            className="p-0 border-r-0 w-[82%] max-w-[300px]"
-            style={{
-              background: 'oklch(0.15 0.02 260 / 98%)',
-              backdropFilter: 'blur(24px)',
-            }}
+            className="p-0 border-r-0 w-[82%] max-w-[300px] bg-white"
           >
             <div className="pt-12 h-full overflow-y-auto pb-6">
               <Sidebar isOpen={true} onClose={() => setSidebarOpen(false)} isMobile />
@@ -85,14 +68,13 @@ export default function Home() {
           </SheetContent>
         </Sheet>
 
-        {/* Mobile FAB for filters */}
+        {/* Mobile FAB */}
         <button
           onClick={() => setSidebarOpen(true)}
-          className="lg:hidden fixed bottom-5 left-4 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-xl active:scale-90 transition-transform"
+          className="lg:hidden fixed bottom-5 left-4 z-40 w-13 h-13 rounded-full flex items-center justify-center shadow-xl active:scale-90 transition-transform text-white"
           style={{
-            background: 'linear-gradient(135deg, oklch(0.75 0.15 180), oklch(0.60 0.15 180))',
-            color: 'oklch(0.15 0.015 260)',
-            boxShadow: '0 4px 25px oklch(0.75 0.15 180 / 35%), 0 0 40px oklch(0.75 0.15 180 / 15%)',
+            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+            boxShadow: '0 4px 20px rgba(249,115,22,0.4), 0 0 40px rgba(249,115,22,0.15)',
           }}
           aria-label="فتح الفلاتر"
         >
@@ -115,7 +97,7 @@ export default function Home() {
             <div className="p-3 sm:p-4 lg:p-6">
               {/* Results count */}
               <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <p className="text-xs sm:text-sm" style={{ color: 'oklch(0.55 0.01 260)' }}>
+                <p className="text-xs sm:text-sm text-gray-500">
                   {filteredApps.length === apps.length
                     ? `${apps.length} تطبيق`
                     : `${filteredApps.length} من ${apps.length} تطبيق`
@@ -138,7 +120,7 @@ export default function Home() {
                   animate={{ opacity: 1 }}
                   className="text-center py-16 sm:py-20"
                 >
-                  <p className="text-sm sm:text-base" style={{ color: 'oklch(0.50 0.01 260)' }}>
+                  <p className="text-sm sm:text-base text-gray-400">
                     لا توجد نتائج مطابقة للفلتر الحالي
                   </p>
                 </motion.div>
